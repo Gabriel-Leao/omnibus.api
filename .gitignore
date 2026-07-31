@@ -1,0 +1,65 @@
+### Maven ###
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Gradle (caso troque no futuro) ###
+.gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS (Spring Tool Suite) ###
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Eclipse ###
+.metadata/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Ambiente e Segredos ###
+.env
+.env.local
+.env.*.local
+
+### Logs da Aplicação ###
+logs/
+*.log
+
+### Compilados e Backups ###
+*.class
+*.bak
+*.swp
+*~
+*.orig
+
+### Sistema Operacional ###
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
+
+### Testes / Cobertura ###
+*.jacoco.exec

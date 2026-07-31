@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: omnibus-api
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  profiles:
+    active: dev
+
+logging:
+  file:
+    name: logs/omnibus-api.log
+
+server:
+  port: ${SERVER_PORT:8080}

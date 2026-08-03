@@ -134,16 +134,21 @@
       <version>${org.mapstruct.version}</version>
     </dependency>
     <dependency>
-      <artifactId>spring-boot-h2console</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
-    <dependency>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
       <groupId>org.springframework.boot</groupId>
     </dependency>
     <dependency>
       <artifactId>spring-boot-starter-flyway</artifactId>
       <groupId>org.springframework.boot</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>flyway-database-postgresql</artifactId>
+      <groupId>org.flywaydb</groupId>
+    </dependency>
+    <dependency>
+      <artifactId>postgresql</artifactId>
+      <groupId>org.postgresql</groupId>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <artifactId>spring-boot-starter-security</artifactId>
@@ -162,7 +167,6 @@
       <groupId>org.springdoc</groupId>
       <version>3.0.2</version>
     </dependency>
-
     <dependency>
       <artifactId>spring-boot-devtools</artifactId>
       <groupId>org.springframework.boot</groupId>
@@ -170,14 +174,13 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <artifactId>h2</artifactId>
-      <groupId>com.h2database</groupId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
       <artifactId>lombok</artifactId>
       <groupId>org.projectlombok</groupId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+      <groupId>org.springframework.boot</groupId>
     </dependency>
 
     <dependency>
@@ -205,11 +208,6 @@
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <artifactId>spring-boot-starter-actuator</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
-
     <dependency>
       <artifactId>spring-boot-starter-actuator-test</artifactId>
       <groupId>org.springframework.boot</groupId>

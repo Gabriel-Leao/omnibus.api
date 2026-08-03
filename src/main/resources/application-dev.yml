@@ -1,17 +1,12 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:omnibusdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/omnibus}
+    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
 
   jpa:
     show-sql: true
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
 logging:
   level:

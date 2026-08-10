@@ -1,6 +1,8 @@
 package br.com.leao.gabriel.omnibus.domain.model;
 
-public enum UserRole {
-  USER,
+public enum StaffRole {
+  VIEWER,
+  MANAGER,
+  EDITOR,
   ADMIN
 }

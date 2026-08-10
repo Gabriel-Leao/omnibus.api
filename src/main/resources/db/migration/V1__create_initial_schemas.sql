@@ -3,11 +3,9 @@ CREATE TABLE users
     id            UUID                  DEFAULT gen_random_uuid(),
     name          VARCHAR(150) NOT NULL,
     email         VARCHAR(200) NOT NULL,
-    role          VARCHAR(10)  NOT NULL,
     password_hash VARCHAR(72)  NOT NULL,
+    account_type  VARCHAR(20)  NOT NULL DEFAULT 'CUSTOMER',
     status        VARCHAR(20)  NOT NULL DEFAULT 'PENDING_ACTIVATION',
-    birth_date    DATE         NOT NULL,
-    photo_url     VARCHAR(500),
 
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -15,20 +13,41 @@ CREATE TABLE users
 
     CONSTRAINT PK_USERS PRIMARY KEY (id),
     CONSTRAINT UNIQUE_USER_EMAIL UNIQUE (email),
-    CONSTRAINT CHECK_USER_ROLE CHECK (role IN ('USER', 'ADMIN')),
+    CONSTRAINT CHECK_ACCOUNT_TYPE CHECK (account_type IN ('CUSTOMER', 'STAFF')),
     CONSTRAINT CHECK_USER_STATUS
         CHECK (
-            status IN (
-                       'ACTIVE',
-                       'PENDING_ACTIVATION',
-                       'PENDING_DELETION',
-                       'SUSPENDED',
-                       'BANNED'
-                )
+            status IN ('ACTIVE', 'PENDING_ACTIVATION', 'PENDING_DELETION', 'SUSPENDED', 'BANNED')
             ),
-    CHECK (
+    CONSTRAINT CHECK_USER_DELETION_CONSISTENCY CHECK (
         (status = 'PENDING_DELETION' AND deleted_at IS NOT NULL)
             OR (status <> 'PENDING_DELETION' AND deleted_at IS NULL)
+        )
+);
+
+CREATE TABLE customer_profiles
+(
+    id         UUID NOT NULL,
+    birth_date DATE NOT NULL,
+    photo_url  VARCHAR(500),
+
+    CONSTRAINT PK_CUSTOMER_PROFILES PRIMARY KEY (id),
+    CONSTRAINT FK_CUSTOMER_PROFILES_USER FOREIGN KEY (id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE staff_profiles
+(
+    id            UUID        NOT NULL,
+    role          VARCHAR(20) NOT NULL,
+    employee_code VARCHAR(30) NOT NULL,
+    department    VARCHAR(20),
+    hired_at      DATE        NOT NULL DEFAULT CURRENT_DATE,
+
+    CONSTRAINT PK_STAFF_PROFILES PRIMARY KEY (id),
+    CONSTRAINT FK_STAFF_PROFILES_USER FOREIGN KEY (id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT UNIQUE_STAFF_EMPLOYEE_CODE UNIQUE (employee_code),
+    CONSTRAINT CHECK_STAFF_ROLE CHECK (role IN ('VIEWER', 'MANAGER', 'EDITOR', 'ADMIN')),
+    CONSTRAINT CHECK_STAFF_DEPARTMENT CHECK (
+        department IS NULL OR department IN ('CATALOG', 'SALES', 'SUPPORT', 'IT', 'MARKETING')
         )
 );
 
@@ -106,8 +125,6 @@ CREATE TABLE authors
     bio         TEXT,
     nationality CHAR(2),
     photo_url   VARCHAR(500),
-    birth_date  DATE         NOT NULL,
-    death_date  DATE,
 
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -12,9 +12,9 @@ práticas de engenharia de software e um pipeline de qualidade de código reprod
 
 Este projeto está em desenvolvimento incremental, documentado publicamente como parte do meu
 processo de aprendizado. A fundação (modelagem de dados, migrations, configuração de ambiente, CI e
-arquitetura hexagonal) está pronta, e o domínio de **Usuários** está em construção — o modelo de
-domínio já existe; portas, adapters de persistência, casos de uso e endpoints ainda estão sendo
-implementados (veja o [Roadmap](#-roadmap)).
+arquitetura hexagonal) está pronta, e o domínio de **contas de usuário** (clientes e funcionários)
+está em construção de ponta a ponta — domínio, persistência, DTOs e validação já existem; casos de
+uso, controllers e autenticação (JWT) ainda estão sendo implementados (veja o [Roadmap](#-roadmap)).
 
 ---
 
@@ -72,9 +72,10 @@ Adapter IN  →  Application  →  Domain  ←  Application  ←  Adapter OUT
 src/main/java/br/com/leao/gabriel/omnibus/
 ├── domain/
 │   ├── model/                      # Entidades de domínio puras (sem @Entity, sem Spring)
+│   ├── exception/                  # Exceções de negócio, sem conhecimento de HTTP
 │   └── port/
-│       ├── in/                     # Interfaces de caso de uso (ex: CreateOrderUseCase)
-│       └── out/                    # Interfaces de infraestrutura (ex: OrderRepositoryPort)
+│       ├── in/                     # Interfaces de caso de uso
+│       └── out/                    # Interfaces de infraestrutura (ex: CustomerRepositoryPort)
 │
 ├── application/
 │   └── service/                    # Implementação dos casos de uso (@Service), orquestra o domínio
@@ -83,12 +84,13 @@ src/main/java/br/com/leao/gabriel/omnibus/
 │   ├── in/
 │   │   └── web/
 │   │       ├── controller/         # Controllers REST
-│   │       ├── dto/                # Request/Response DTOs
-│   │       └── security/
-│   │           └── JwtAuthenticationFilter.java
+│   │       ├── dto/request/        # DTOs de entrada, com Bean Validation
+│   │       ├── mapper/             # Domain → DTO de resposta
+│   │       ├── validation/         # Constraints customizadas (MinimumAge, EnumValue, PasswordMatches)
+│   │       └── exception/          # GlobalExceptionHandler (@RestControllerAdvice)
 │   └── out/
 │       ├── persistence/
-│       │   ├── entity/             # @Entity JPA — separada da entidade de domínio
+│       │   ├── entity/             # @Entity JPA — separada do modelo de domínio
 │       │   ├── repository/         # Interfaces Spring Data JPA
 │       │   └── *PersistenceAdapter.java   # implementa as portas de saída (@Component)
 │       └── security/
@@ -109,7 +111,7 @@ casos de uso. `@Configuration` fica reservado para beans genuinamente de infraes
 ### Convenção adotada para peças do Spring Security
 
 O Spring Security não foi desenhado pensando em Hexagonal, então algumas classes exigem uma decisão
-explícita de onde morar. A regra aplicada neste projeto:
+explícita de onde morar:
 
 | Classe                    | Papel                                         | Localização                | Justificativa                                                                                      |
 |---------------------------|-----------------------------------------------|----------------------------|----------------------------------------------------------------------------------------------------|
@@ -125,33 +127,83 @@ explícita de onde morar. A regra aplicada neste projeto:
 
 ---
 
+## 👤 Contas de usuário: `Customer` e `Staff`
+
+Em vez de uma única entidade `User` genérica, o domínio modela dois tipos de conta **estruturalmente
+separados**, sem herança entre si (domínio e DTOs) além de uma base de identidade comum, refletindo
+que cliente e funcionário têm regras, campos e ciclos de vida diferentes:
+
+- **`Customer`**: autocadastro público, exige idade mínima (18 anos), pode solicitar exclusão da
+  própria conta (com carência de 90 dias antes do expurgo definitivo).
+- **`Staff`**: criado apenas por um administrador, possui papel (`VIEWER`, `MANAGER`, `EDITOR`,
+  `ADMIN`) e código de funcionário — nunca se autocadastra, nunca compra ou favorita produtos.
+
+### Modelagem no banco (Class Table Inheritance)
+
+`users` guarda o que é comum a qualquer conta (autenticação, status, tipo); `customer_profiles` e
+`staff_profiles` guardam os dados específicos de cada tipo, ligadas por FK/PK compartilhada — a
+mesma técnica usada em `products`/`books`.
+
+### Modelagem no domínio e na persistência
+
+- **Domínio**: `UserAccount` (abstrata) concentra validação compartilhada (ex.: consistência entre
+  `status` e `deletedAt`); `Customer` e `Staff` estendem, cada uma com suas próprias regras e
+  campos.
+- **JPA**: `UserJpaEntity` (abstrata, `@Inheritance(JOINED)`) mapeia a tabela base;
+  `CustomerJpaEntity`/`StaffJpaEntity` mapeiam as tabelas filhas, com o discriminador
+  (`account_type`) controlado automaticamente pelo Hibernate.
+- **DTOs de request**: `RegisterCustomerRequest` e `RegisterStaffRequest` são *records*
+  independentes, sem herança entre eles — os poucos campos em comum (`name`, `email`, `password`)
+  são duplicados deliberadamente, evitando uma abstração forçada para um conjunto pequeno de campos.
+
+### Validação customizada (Bean Validation)
+
+Além das anotações padrão (`@NotBlank`, `@Email`, `@Size`), o projeto define constraints
+reutilizáveis em `adapter/in/web/validation/`:
+
+- **`@MinimumAge`**: valida idade mínima a partir de uma data de nascimento, sem persistir idade
+  calculada.
+- **`@EnumValue`**: valida se uma `String` corresponde a uma constante de um enum arbitrário,
+  reutilizável para qualquer enum do domínio.
+- **`@PasswordMatches`**: constraint de nível de classe (via interface `PasswordConfirmable`,
+  satisfeita automaticamente pelos *records*) que compara `password` e `confirmPassword`.
+
+### Tratamento de erros
+
+Um `@RestControllerAdvice` centralizado (`GlobalExceptionHandler`) traduz exceções de
+domínio/validação em respostas HTTP padronizadas, incluindo um `traceId` gerado por requisição (via
+`MDC`) para correlacionar logs e respostas de erro.
+
+---
+
 ## 🗄️ Modelagem de Dados (implementada)
 
 O schema inicial (`V1__create_initial_schema.sql`) já está definido e versionado via Flyway,
-cobrindo o domínio de **Usuários** e **Catálogo de Produtos**. Decisões relevantes de modelagem:
+cobrindo o domínio de **Contas de Usuário** (clientes e funcionários) e **Catálogo de Produtos**.
+Decisões relevantes de modelagem:
 
-- **Herança de tabelas (Class Table Inheritance)**: `products` concentra os atributos comuns a
-  qualquer item vendável; `books` guarda os atributos específicos de livros/HQs. Isso permite
-  estender o catálogo no futuro (ex.: `games`) sem alterar a estrutura existente.
+- **Herança de tabelas (Class Table Inheritance)**: usada tanto em `products`/`books` (extensível a
+  novos tipos de produto) quanto em `users`/`customer_profiles`/`staff_profiles`.
 - **Entidades associativas ricas**: relações N:N que carregam atributos próprios (ex.:
   `book_authors` com o papel do autor na obra; `product_languages` com o tipo de presença do idioma)
   são modeladas como entidades explícitas, não como `ManyToMany` simples.
-- **Ciclo de vida do usuário via `status`**: em vez de um boolean simples, `users.status` cobre
-  `PENDING_ACTIVATION`, `ACTIVE`, `PENDING_DELETION`, `SUSPENDED` e `BANNED` — permitindo distinguir
-  contas aguardando confirmação de e-mail, deleção autossolicitada (com carência de 90 dias) e
-  moderação administrativa, sem ambiguidade entre esses fluxos.
+- **Ciclo de vida via `status`**: `users.status` cobre `PENDING_ACTIVATION`, `ACTIVE`,
+  `PENDING_DELETION`, `SUSPENDED` e `BANNED`, distinguindo contas aguardando confirmação, deleção
+  autossolicitada (com carência de 90 dias) e moderação administrativa, sem ambiguidade entre esses
+  fluxos.
 - **Tokens de uso único (`user_tokens`)**: tabela genérica (via `token_type`) para ativação de conta
-  e reset de senha. Guarda apenas o hash SHA-256 do token (nunca o valor em claro), com expiração
-  obrigatória e um índice único parcial garantindo, no nível de banco, no máximo um token não
-  utilizado por tipo/usuário.
-- **UUID como chave primária de `users`**: evita enumeração de usuários via URL. Entidades de
-  catálogo mantêm `BIGINT` sequencial por simplicidade e performance de indexação.
+  e reset de senha. Guarda apenas o hash SHA-256 do token, com expiração obrigatória e um índice
+  único parcial garantindo, no nível de banco, no máximo um token não utilizado por tipo/usuário.
+- **UUID como chave primária de `users`**: evita enumeração de contas via URL. Entidades de catálogo
+  mantêm `BIGINT` sequencial por simplicidade e performance de indexação.
 - **Soft delete e retenção**: usuários e produtos não são removidos fisicamente no fluxo comum — um
-  status controla a disponibilidade, preservando histórico e permitindo expurgo controlado (job
-  futuro) apenas para deleções autossolicitadas já fora do prazo de carência.
+  status controla a disponibilidade, preservando histórico e permitindo expurgo controlado apenas
+  para deleções autossolicitadas já fora do prazo de carência.
 - **Busca full-text nativa do Postgres**: índice `GIN` sobre
-  `to_tsvector('portuguese', title || description)` em `products`, usando a assinatura de dois
-  argumentos (exigida para expressões `IMMUTABLE` em índices).
+  `to_tsvector('portuguese', title || description)` em `products`.
+- **Campos adicionados apenas com propósito de negócio concreto**: decisões como não incluir `sku`,
+  múltiplos papéis simultâneos ou datas biográficas de autor foram deliberadas — nenhum desses dados
+  alimenta uma tela ou regra existente hoje.
 
 ---
 
@@ -227,8 +279,8 @@ automaticamente via **GitHub Actions** a cada push/PR para `main`:
 
 - [x] **Etapa 1** — Modelagem de dados (PostgreSQL + Flyway), configuração de ambiente, arquitetura
   hexagonal definida, CI e tooling de qualidade
-- [ ] **Etapa 2** — Domínio, portas, adapters de persistência e testes unitários (Catálogo e
-  Usuários) — *em andamento: modelo de domínio `User` implementado*
+- [ ] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs e validação (Customer/Staff) —
+  *em andamento: domínio, JPA, mappers e validação prontos; casos de uso e controllers pendentes*
 - [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT, ativação de conta e reset
   de senha via `user_tokens`
 - [ ] **Etapa 4** — Carrinho de compras e Pedidos

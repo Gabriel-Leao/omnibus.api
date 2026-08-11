@@ -1,6 +1,7 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.dto.request;
 
 import br.com.leao.gabriel.omnibus.adapter.in.web.validation.enumValue.EnumValue;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordConfirmable;
 import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordMatches;
 import br.com.leao.gabriel.omnibus.domain.model.StaffDepartment;
 import br.com.leao.gabriel.omnibus.domain.model.StaffRole;
@@ -41,6 +42,6 @@ public record RegisterStaffRequest(
 
     @PastOrPresent(message = "hired at should be a past or present date")
     LocalDate hiredAt
-) {
+) implements PasswordConfirmable {
 
 }

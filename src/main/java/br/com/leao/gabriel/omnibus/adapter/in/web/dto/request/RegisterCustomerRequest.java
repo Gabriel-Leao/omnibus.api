@@ -1,6 +1,7 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.dto.request;
 
 import br.com.leao.gabriel.omnibus.adapter.in.web.validation.minimunAge.MinimumAge;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordConfirmable;
 import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordMatches;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -33,6 +34,6 @@ public record RegisterCustomerRequest(
 
     @URL(message = "Photo url must be a valid URL")
     String photoUrl
-) {
+) implements PasswordConfirmable {
 
 }

@@ -1,5 +1,6 @@
 package br.com.leao.gabriel.omnibus.application.service;
 
+import br.com.leao.gabriel.omnibus.domain.exception.EmailAlreadyRegisteredException;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.port.in.RegisterCustomerUseCase;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
@@ -20,7 +21,7 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
       String photoUrl) {
     var isEmailTaken = customerRepository.existsByEmail(email);
     if (isEmailTaken) {
-      throw new RuntimeException("Email already exists");
+      throw new EmailAlreadyRegisteredException(email);
     }
     var hashedPassword = passwordEncoder.encode(rawPassword);
     var customer = Customer.register(name, email, hashedPassword, birthDate, photoUrl);

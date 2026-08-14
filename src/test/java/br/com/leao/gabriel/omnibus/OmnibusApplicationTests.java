@@ -29,6 +29,5 @@ class OmnibusApplicationTests {
   }
 
   @Test
-  void contextLoads() {
-  }
+  void contextLoads() {}
 }

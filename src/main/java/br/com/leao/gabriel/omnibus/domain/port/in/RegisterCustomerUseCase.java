@@ -11,6 +11,6 @@ public interface RegisterCustomerUseCase {
   /**
    * Registers a customer using the supplied registration data.
    */
-  Customer execute(String name, String email, String rawPassword, LocalDate birthDate,
-      String photoUrl);
+  Customer execute(
+      String name, String email, String rawPassword, LocalDate birthDate, String photoUrl);
 }

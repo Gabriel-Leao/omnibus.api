@@ -18,6 +18,4 @@ public record StaffResponse(
     String employeeCode,
     StaffDepartment department,
     LocalDate hiredAt,
-    OffsetDateTime createdAt) {
-
-}
+    OffsetDateTime createdAt) {}

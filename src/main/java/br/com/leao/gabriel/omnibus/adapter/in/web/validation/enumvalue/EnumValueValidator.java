@@ -19,9 +19,10 @@ public class EnumValueValidator implements ConstraintValidator<EnumValue, String
   @Override
   public void initialize(EnumValue constraintAnnotation) {
     this.enumClass = constraintAnnotation.enumClass();
-    this.allowedValues = Arrays.stream(enumClass.getEnumConstants())
-        .map(Enum::name)
-        .collect(Collectors.joining(", "));
+    this.allowedValues =
+        Arrays.stream(enumClass.getEnumConstants())
+            .map(Enum::name)
+            .collect(Collectors.joining(", "));
   }
 
   /**
@@ -33,13 +34,14 @@ public class EnumValueValidator implements ConstraintValidator<EnumValue, String
       return true;
     }
 
-    boolean isValid = Arrays.stream(enumClass.getEnumConstants())
-        .anyMatch(constant -> constant.name().equals(value));
+    boolean isValid =
+        Arrays.stream(enumClass.getEnumConstants())
+            .anyMatch(constant -> constant.name().equals(value));
 
     if (!isValid) {
       context.disableDefaultConstraintViolation();
-      context.buildConstraintViolationWithTemplate(
-              "Must be one of: " + allowedValues)
+      context
+          .buildConstraintViolationWithTemplate("Must be one of: " + allowedValues)
           .addConstraintViolation();
     }
 

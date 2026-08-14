@@ -126,7 +126,7 @@
               <formatJavadoc>false</formatJavadoc>
               <reflowLongStrings>true</reflowLongStrings>
               <style>GOOGLE</style>
-              <version>1.8</version>
+              <version>1.27.0</version>
             </googleJavaFormat>
           </java>
 

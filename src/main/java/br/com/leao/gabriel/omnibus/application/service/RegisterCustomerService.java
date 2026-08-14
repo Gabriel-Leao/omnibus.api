@@ -23,8 +23,8 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
    * Registers a customer after validating that the email is not already registered.
    */
   @Override
-  public Customer execute(String name, String email, String rawPassword, LocalDate birthDate,
-      String photoUrl) {
+  public Customer execute(
+      String name, String email, String rawPassword, LocalDate birthDate, String photoUrl) {
     var isEmailTaken = customerRepository.existsByEmail(email);
     if (isEmailTaken) {
       throw new EmailAlreadyRegisteredException(email);

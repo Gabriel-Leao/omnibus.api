@@ -14,6 +14,4 @@ public record CustomerResponse(
     UserStatus status,
     LocalDate birthDate,
     String photoUrl,
-    OffsetDateTime createdAt) {
-
-}
+    OffsetDateTime createdAt) {}

@@ -22,14 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RegisterCustomerServiceTest {
 
-  @Mock
-  private PasswordEncoderPort passwordEncoder;
+  @Mock private PasswordEncoderPort passwordEncoder;
 
-  @Mock
-  private CustomerRepositoryPort customerRepository;
+  @Mock private CustomerRepositoryPort customerRepository;
 
-  @InjectMocks
-  private RegisterCustomerService service;
+  @InjectMocks private RegisterCustomerService service;
 
   @Test
   void shouldRegisterCustomerSuccessfully() {
@@ -40,30 +37,15 @@ class RegisterCustomerServiceTest {
     var birthDate = LocalDate.of(2000, 1, 1);
     var photoUrl = "https://example.com/photo.jpg";
 
-    var savedCustomer = Customer.register(
-        name,
-        email,
-        hashedPassword,
-        birthDate,
-        photoUrl
-    );
+    var savedCustomer = Customer.register(name, email, hashedPassword, birthDate, photoUrl);
 
-    when(customerRepository.existsByEmail(email))
-        .thenReturn(false);
+    when(customerRepository.existsByEmail(email)).thenReturn(false);
 
-    when(passwordEncoder.encode(rawPassword))
-        .thenReturn(hashedPassword);
+    when(passwordEncoder.encode(rawPassword)).thenReturn(hashedPassword);
 
-    when(customerRepository.save(any(Customer.class)))
-        .thenReturn(savedCustomer);
+    when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
 
-    var result = service.execute(
-        name,
-        email,
-        rawPassword,
-        birthDate,
-        photoUrl
-    );
+    var result = service.execute(name, email, rawPassword, birthDate, photoUrl);
 
     assertThat(result).isSameAs(savedCustomer);
 
@@ -76,18 +58,10 @@ class RegisterCustomerServiceTest {
   void shouldNotRegisterCustomerWhenEmailIsAlreadyRegistered() {
     var email = "gabriel@email.com";
 
-    when(customerRepository.existsByEmail(email))
-        .thenReturn(true);
+    when(customerRepository.existsByEmail(email)).thenReturn(true);
 
-    assertThatThrownBy(() ->
-        service.execute(
-            "Gabriel",
-            email,
-            "password123",
-            LocalDate.of(2000, 1, 1),
-            null
-        )
-    )
+    assertThatThrownBy(
+            () -> service.execute("Gabriel", email, "password123", LocalDate.of(2000, 1, 1), null))
         .isInstanceOf(EmailAlreadyRegisteredException.class);
 
     verify(customerRepository).existsByEmail(email);

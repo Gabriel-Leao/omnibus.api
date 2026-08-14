@@ -24,53 +24,34 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final Logger log =
-      LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
    * Handles validation errors raised by request argument validation.
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErrorResponseDto> handleValidation(
-      MethodArgumentNotValidException ex,
-      HttpServletRequest request) {
+      MethodArgumentNotValidException ex, HttpServletRequest request) {
 
     List<ErrorResponseDto.FieldErrorDto> fieldErrors =
-        ex.getBindingResult()
-            .getFieldErrors()
-            .stream()
-            .map(fe ->
-                new ErrorResponseDto.FieldErrorDto(
-                    fe.getField(),
-                    fe.getDefaultMessage()))
+        ex.getBindingResult().getFieldErrors().stream()
+            .map(fe -> new ErrorResponseDto.FieldErrorDto(fe.getField(), fe.getDefaultMessage()))
             .toList();
 
-    log.warn(
-        "Validation failed on {}: {}",
-        request.getRequestURI(),
-        fieldErrors);
+    log.warn("Validation failed on {}: {}", request.getRequestURI(), fieldErrors);
 
-    return build(
-        HttpStatus.BAD_REQUEST,
-        "Validation failed",
-        fieldErrors);
+    return build(HttpStatus.BAD_REQUEST, "Validation failed", fieldErrors);
   }
 
   /**
    * Handles requests with malformed JSON bodies.
    */
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  public ResponseEntity<ErrorResponseDto> handleMalformedJson(
-      HttpServletRequest request) {
+  public ResponseEntity<ErrorResponseDto> handleMalformedJson(HttpServletRequest request) {
 
-    log.warn(
-        "Malformed request body on {}",
-        request.getRequestURI());
+    log.warn("Malformed request body on {}", request.getRequestURI());
 
-    return build(
-        HttpStatus.BAD_REQUEST,
-        "Malformed request body",
-        List.of());
+    return build(HttpStatus.BAD_REQUEST, "Malformed request body", List.of());
   }
 
   /**
@@ -78,18 +59,11 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<ErrorResponseDto> handleNotFound(
-      NotFoundException ex,
-      HttpServletRequest request) {
+      NotFoundException ex, HttpServletRequest request) {
 
-    log.warn(
-        "Not found on {}: {}",
-        request.getRequestURI(),
-        ex.getMessage());
+    log.warn("Not found on {}: {}", request.getRequestURI(), ex.getMessage());
 
-    return build(
-        HttpStatus.NOT_FOUND,
-        ex.getMessage(),
-        List.of());
+    return build(HttpStatus.NOT_FOUND, ex.getMessage(), List.of());
   }
 
   /**
@@ -97,18 +71,11 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(ConflictException.class)
   public ResponseEntity<ErrorResponseDto> handleConflict(
-      ConflictException ex,
-      HttpServletRequest request) {
+      ConflictException ex, HttpServletRequest request) {
 
-    log.warn(
-        "Conflict on {}: {}",
-        request.getRequestURI(),
-        ex.getMessage());
+    log.warn("Conflict on {}: {}", request.getRequestURI(), ex.getMessage());
 
-    return build(
-        HttpStatus.CONFLICT,
-        ex.getMessage(),
-        List.of());
+    return build(HttpStatus.CONFLICT, ex.getMessage(), List.of());
   }
 
   /**
@@ -116,18 +83,11 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(ForbiddenException.class)
   public ResponseEntity<ErrorResponseDto> handleForbidden(
-      ForbiddenException ex,
-      HttpServletRequest request) {
+      ForbiddenException ex, HttpServletRequest request) {
 
-    log.warn(
-        "Forbidden on {}: {}",
-        request.getRequestURI(),
-        ex.getMessage());
+    log.warn("Forbidden on {}: {}", request.getRequestURI(), ex.getMessage());
 
-    return build(
-        HttpStatus.FORBIDDEN,
-        ex.getMessage(),
-        List.of());
+    return build(HttpStatus.FORBIDDEN, ex.getMessage(), List.of());
   }
 
   /**
@@ -135,18 +95,11 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(BusinessRuleViolationException.class)
   public ResponseEntity<ErrorResponseDto> handleBusinessRule(
-      BusinessRuleViolationException ex,
-      HttpServletRequest request) {
+      BusinessRuleViolationException ex, HttpServletRequest request) {
 
-    log.warn(
-        "Business rule violated on {}: {}",
-        request.getRequestURI(),
-        ex.getMessage());
+    log.warn("Business rule violated on {}: {}", request.getRequestURI(), ex.getMessage());
 
-    return build(
-        HttpStatus.BAD_REQUEST,
-        ex.getMessage(),
-        List.of());
+    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), List.of());
   }
 
   /**
@@ -154,18 +107,11 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ErrorResponseDto> handleIllegalArgument(
-      IllegalArgumentException ex,
-      HttpServletRequest request) {
+      IllegalArgumentException ex, HttpServletRequest request) {
 
-    log.warn(
-        "Illegal argument on {}: {}",
-        request.getRequestURI(),
-        ex.getMessage());
+    log.warn("Illegal argument on {}: {}", request.getRequestURI(), ex.getMessage());
 
-    return build(
-        HttpStatus.BAD_REQUEST,
-        ex.getMessage(),
-        List.of());
+    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), List.of());
   }
 
   /**
@@ -173,38 +119,21 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponseDto> handleUnexpected(
-      Exception ex,
-      HttpServletRequest request) {
+      Exception ex, HttpServletRequest request) {
 
-    log.error(
-        "Unexpected error on {}",
-        request.getRequestURI(),
-        ex);
+    log.error("Unexpected error on {}", request.getRequestURI(), ex);
 
-    return build(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        "An unexpected error occurred",
-        List.of());
+    return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", List.of());
   }
 
   private ResponseEntity<ErrorResponseDto> build(
-      HttpStatus status,
-      String message,
-      List<ErrorResponseDto.FieldErrorDto> fieldErrors) {
+      HttpStatus status, String message, List<ErrorResponseDto.FieldErrorDto> fieldErrors) {
 
-    String traceId =
-        MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
+    String traceId = MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
 
     ErrorResponseDto body =
-        new ErrorResponseDto(
-            OffsetDateTime.now(),
-            status.value(),
-            message,
-            traceId,
-            fieldErrors);
+        new ErrorResponseDto(OffsetDateTime.now(), status.value(), message, traceId, fieldErrors);
 
-    return ResponseEntity
-        .status(status)
-        .body(body);
+    return ResponseEntity.status(status).body(body);
   }
 }

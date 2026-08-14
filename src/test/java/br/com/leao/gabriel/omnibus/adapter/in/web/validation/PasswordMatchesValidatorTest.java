@@ -17,7 +17,8 @@ class PasswordMatchesValidatorTest {
   private PasswordMatchesValidator validator;
   private ConstraintValidatorContext context;
   private ConstraintValidatorContext.ConstraintViolationBuilder violationBuilder;
-  private ConstraintValidatorContext.ConstraintViolationBuilder.NodeBuilderCustomizableContext nodeBuilder;
+  private ConstraintValidatorContext.ConstraintViolationBuilder.NodeBuilderCustomizableContext
+      nodeBuilder;
 
   @BeforeEach
   void setUp() {
@@ -26,7 +27,8 @@ class PasswordMatchesValidatorTest {
     violationBuilder = mock(ConstraintValidatorContext.ConstraintViolationBuilder.class);
     nodeBuilder =
         mock(
-            ConstraintValidatorContext.ConstraintViolationBuilder.NodeBuilderCustomizableContext.class);
+            ConstraintValidatorContext.ConstraintViolationBuilder.NodeBuilderCustomizableContext
+                .class);
 
     when(context.buildConstraintViolationWithTemplate("Passwords do not match"))
         .thenReturn(violationBuilder);
@@ -84,7 +86,5 @@ class PasswordMatchesValidatorTest {
   }
 
   private record TestPasswordConfirmable(String password, String confirmPassword)
-      implements PasswordConfirmable {
-
-  }
+      implements PasswordConfirmable {}
 }

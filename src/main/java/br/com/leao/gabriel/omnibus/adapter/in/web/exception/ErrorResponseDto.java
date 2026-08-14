@@ -28,7 +28,5 @@ public record ErrorResponseDto(
    * @param field   the name of the field that caused the validation error
    * @param message the validation error message
    */
-  public record FieldErrorDto(String field, String message) {
-
-  }
+  public record FieldErrorDto(String field, String message) {}
 }

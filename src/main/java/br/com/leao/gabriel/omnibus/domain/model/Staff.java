@@ -29,8 +29,8 @@ public class Staff extends UserAccount {
       String employeeCode,
       StaffDepartment department,
       LocalDate hiredAt) {
-    super(id, name, email, passwordHash, status, AccountType.STAFF, createdAt, updatedAt,
-        deletedAt);
+    super(
+        id, name, email, passwordHash, status, AccountType.STAFF, createdAt, updatedAt, deletedAt);
     this.role = Objects.requireNonNull(role, "Role must not be null");
     this.employeeCode = Objects.requireNonNull(employeeCode, "Employee code must not be null");
     this.department = department;
@@ -41,11 +41,25 @@ public class Staff extends UserAccount {
    * Creates a staff member with administrator privileges.
    */
   public static Staff createByAdmin(
-      String name, String email, String passwordHash, StaffRole role,
-      String employeeCode, StaffDepartment department) {
+      String name,
+      String email,
+      String passwordHash,
+      StaffRole role,
+      String employeeCode,
+      StaffDepartment department) {
     return new Staff(
-        null, name, email, passwordHash, UserStatus.ACTIVE, null, null, null,
-        role, employeeCode, department, LocalDate.now());
+        null,
+        name,
+        email,
+        passwordHash,
+        UserStatus.ACTIVE,
+        null,
+        null,
+        null,
+        role,
+        employeeCode,
+        department,
+        LocalDate.now());
   }
 
   /**
@@ -68,7 +82,17 @@ public class Staff extends UserAccount {
     Objects.requireNonNull(createdAt, "CreatedAt must not be null when reconstructing");
     Objects.requireNonNull(updatedAt, "UpdatedAt must not be null when reconstructing");
     return new Staff(
-        id, name, email, passwordHash, status, createdAt, updatedAt, deletedAt,
-        role, employeeCode, department, hiredAt);
+        id,
+        name,
+        email,
+        passwordHash,
+        status,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        role,
+        employeeCode,
+        department,
+        hiredAt);
   }
 }

@@ -19,6 +19,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
 
   /** MDC key used to store the request trace identifier. */
   public static final String TRACE_ID_MDC_KEY = "traceId";
+
   /** HTTP header used to expose the request trace identifier. */
   public static final String TRACE_ID_HEADER = "X-Trace-Id";
 

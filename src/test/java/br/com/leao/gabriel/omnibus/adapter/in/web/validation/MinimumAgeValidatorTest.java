@@ -18,18 +18,15 @@ class MinimumAgeValidatorTest {
 
   private MinimumAgeValidator validator;
 
-  @Mock
-  private MinimumAge annotation;
+  @Mock private MinimumAge annotation;
 
-  @Mock
-  private ConstraintValidatorContext context;
+  @Mock private ConstraintValidatorContext context;
 
   @BeforeEach
   void setUp() {
     validator = new MinimumAgeValidator();
 
-    when(annotation.value())
-        .thenReturn(18);
+    when(annotation.value()).thenReturn(18);
 
     validator.initialize(annotation);
   }

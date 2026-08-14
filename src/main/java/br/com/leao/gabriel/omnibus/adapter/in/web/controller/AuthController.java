@@ -30,8 +30,7 @@ public class AuthController {
    */
   @PostMapping("/register")
   public ResponseEntity<CustomerResponse> createCustomer(
-      @Valid
-      @RequestBody RegisterCustomerRequest requestData) {
+      @Valid @RequestBody RegisterCustomerRequest requestData) {
     Customer customer =
         registerCustomerUseCase.execute(
             requestData.name(),

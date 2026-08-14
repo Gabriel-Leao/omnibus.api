@@ -21,22 +21,17 @@ class EnumValueValidatorTest {
 
   private EnumValueValidator validator;
 
-  @Mock
-  private EnumValue annotation;
+  @Mock private EnumValue annotation;
 
-  @Mock
-  private ConstraintValidatorContext context;
+  @Mock private ConstraintValidatorContext context;
 
-  @Mock
-  private ConstraintValidatorContext.ConstraintViolationBuilder violationBuilder;
+  @Mock private ConstraintValidatorContext.ConstraintViolationBuilder violationBuilder;
 
   @BeforeEach
   void setUp() {
     validator = new EnumValueValidator();
 
-    doReturn(CustomerStatus.class)
-        .when(annotation)
-        .enumClass();
+    doReturn(CustomerStatus.class).when(annotation).enumClass();
 
     validator.initialize(annotation);
   }
@@ -52,9 +47,8 @@ class EnumValueValidatorTest {
 
   @Test
   void shouldReturnFalseWhenValueIsInvalid() {
-    when(context.buildConstraintViolationWithTemplate(
-        "Must be one of: ACTIVE, INACTIVE"
-    )).thenReturn(violationBuilder);
+    when(context.buildConstraintViolationWithTemplate("Must be one of: ACTIVE, INACTIVE"))
+        .thenReturn(violationBuilder);
 
     var result = validator.isValid("DELETED", context);
 
@@ -62,9 +56,7 @@ class EnumValueValidatorTest {
 
     verify(context).disableDefaultConstraintViolation();
 
-    verify(context).buildConstraintViolationWithTemplate(
-        "Must be one of: ACTIVE, INACTIVE"
-    );
+    verify(context).buildConstraintViolationWithTemplate("Must be one of: ACTIVE, INACTIVE");
 
     verify(violationBuilder).addConstraintViolation();
   }

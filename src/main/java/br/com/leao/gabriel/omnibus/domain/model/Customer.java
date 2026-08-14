@@ -25,7 +25,15 @@ public class Customer extends UserAccount {
       OffsetDateTime deletedAt,
       LocalDate birthDate,
       String photoUrl) {
-    super(id, name, email, passwordHash, status, AccountType.CUSTOMER, createdAt, updatedAt,
+    super(
+        id,
+        name,
+        email,
+        passwordHash,
+        status,
+        AccountType.CUSTOMER,
+        createdAt,
+        updatedAt,
         deletedAt);
     this.birthDate = validateBirthDate(birthDate);
     this.photoUrl = photoUrl;
@@ -37,8 +45,16 @@ public class Customer extends UserAccount {
   public static Customer register(
       String name, String email, String passwordHash, LocalDate birthDate, String photoUrl) {
     return new Customer(
-        null, name, email, passwordHash, UserStatus.PENDING_ACTIVATION,
-        null, null, null, birthDate, photoUrl);
+        null,
+        name,
+        email,
+        passwordHash,
+        UserStatus.PENDING_ACTIVATION,
+        null,
+        null,
+        null,
+        birthDate,
+        photoUrl);
   }
 
   /**
@@ -59,8 +75,16 @@ public class Customer extends UserAccount {
     Objects.requireNonNull(createdAt, "CreatedAt must not be null when reconstructing");
     Objects.requireNonNull(updatedAt, "UpdatedAt must not be null when reconstructing");
     return new Customer(
-        id, name, email, passwordHash, status, createdAt, updatedAt, deletedAt,
-        birthDate, photoUrl);
+        id,
+        name,
+        email,
+        passwordHash,
+        status,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        birthDate,
+        photoUrl);
   }
 
   private static LocalDate validateBirthDate(LocalDate birthDate) {
@@ -76,7 +100,15 @@ public class Customer extends UserAccount {
    */
   public Customer requestDeletion() {
     return new Customer(
-        getId(), getName(), getEmail(), getPasswordHash(), UserStatus.PENDING_DELETION,
-        getCreatedAt(), OffsetDateTime.now(), OffsetDateTime.now(), birthDate, photoUrl);
+        getId(),
+        getName(),
+        getEmail(),
+        getPasswordHash(),
+        UserStatus.PENDING_DELETION,
+        getCreatedAt(),
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        birthDate,
+        photoUrl);
   }
 }

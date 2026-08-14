@@ -14,9 +14,6 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  profiles:
-    active: dev
-
 logging:
   file:
     name: logs/omnibus-api.log

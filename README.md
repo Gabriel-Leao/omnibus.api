@@ -11,10 +11,11 @@ práticas de engenharia de software e um pipeline de qualidade de código reprod
 ## 🚧 Status atual do projeto
 
 Este projeto está em desenvolvimento incremental, documentado publicamente como parte do meu
-processo de aprendizado. A fundação (modelagem de dados, migrations, configuração de ambiente, CI e
-arquitetura hexagonal) está pronta, e o domínio de **contas de usuário** (clientes e funcionários)
-está em construção de ponta a ponta — domínio, persistência, DTOs e validação já existem; casos de
-uso, controllers e autenticação (JWT) ainda estão sendo implementados (veja o [Roadmap](#-roadmap)).
+processo de aprendizado. A fundação (modelagem de dados, migrations, configuração de ambiente, CI,
+arquitetura hexagonal e pipeline de qualidade) está pronta, e o domínio de **contas de usuário**
+(clientes e funcionários) está em construção de ponta a ponta — domínio, persistência, DTOs,
+validação customizada e testes unitários já existem; casos de uso, controllers e autenticação (JWT)
+ainda estão sendo implementados (veja o [Roadmap](#-roadmap)).
 
 ---
 
@@ -60,7 +61,7 @@ sistema.
 As setas de dependência sempre apontam **de fora para dentro**: adapters conhecem o domínio; o
 domínio nunca conhece os adapters.
 
-```
+```text
 Adapter IN  →  Application  →  Domain  ←  Application  ←  Adapter OUT
 (Controller,                  (Model +                    (JPA, JWT,
  JWT Filter)                   Portas)                     UserDetails)
@@ -68,7 +69,7 @@ Adapter IN  →  Application  →  Domain  ←  Application  ←  Adapter OUT
 
 ### Estrutura de pacotes
 
-```
+```text
 src/main/java/br/com/leao/gabriel/omnibus/
 ├── domain/
 │   ├── model/                      # Entidades de domínio puras (sem @Entity, sem Spring)
@@ -168,6 +169,22 @@ reutilizáveis em `adapter/in/web/validation/`:
 - **`@PasswordMatches`**: constraint de nível de classe (via interface `PasswordConfirmable`,
   satisfeita automaticamente pelos *records*) que compara `password` e `confirmPassword`.
 
+### Testes das validações customizadas
+
+As constraints customizadas possuem testes unitários isolados, verificando suas regras diretamente
+sem a necessidade de subir o contexto completo do Spring:
+
+- **`EnumValueValidatorTest`**: verifica valores válidos, inválidos e valores `null`, além da
+  mensagem de violação personalizada.
+- **`MinimumAgeValidatorTest`**: verifica a idade mínima configurada, incluindo casos abaixo do
+  limite, exatamente no limite e valores `null`.
+- **`PasswordMatchesValidatorTest`**: verifica senhas iguais, senhas diferentes e o comportamento
+  quando um dos valores é `null`, além de garantir que a violação seja direcionada ao campo
+  `confirmPassword`.
+
+Essa abordagem mantém os testes das regras de validação rápidos e independentes de banco de dados,
+Spring Context ou infraestrutura externa.
+
 ### Tratamento de erros
 
 Um `@RestControllerAdvice` centralizado (`GlobalExceptionHandler`) traduz exceções de
@@ -240,13 +257,26 @@ cd omnibus-api
 # Subir o PostgreSQL local
 docker compose up -d
 
-# Rodar o pipeline de qualidade (compilação, testes, Checkstyle e Spotless)
+# Rodar o pipeline completo de verificação
 ./mvnw clean verify
 ```
 
-No estado atual, o `verify` compila o projeto, aplica a migration do Flyway (criando o schema no
-Postgres) e valida a formatação/estilo de código. Endpoints REST ainda estão em desenvolvimento
-(veja o [Roadmap](#-roadmap)).
+O comando `verify` compila o projeto, executa os testes automatizados, aplica as migrations do
+Flyway e valida a formatação e o estilo do código.
+
+### Executando somente os testes
+
+Para executar todos os testes:
+
+```bash
+./mvnw test
+```
+
+Para executar uma classe de teste específica:
+
+```bash
+./mvnw test -Dtest=PasswordMatchesValidatorTest
+```
 
 ### Acessando o banco localmente
 
@@ -261,17 +291,78 @@ TablePlus, `psql`):
 
 ---
 
-## ✅ Qualidade de Código
+## 🔄 Integração Contínua (CI)
+
+O projeto utiliza **GitHub Actions** para executar automaticamente as verificações de qualidade a
+cada `push` e `pull request` direcionados para a branch `main`.
+
+O pipeline é dividido em três etapas:
+
+```text
+                         ┌── Tests ───────────────┐
+                         │                         │
+Push / Pull Request ─────┤                         ├──→ Build
+                         │                         │
+                         └── Code Quality ─────────┘
+```
+
+### Tests
+
+Executa:
+
+```bash
+./mvnw test
+```
+
+Responsável por garantir que os testes automatizados estejam passando antes da conclusão do
+pipeline.
+
+### Code Quality
+
+Executa as verificações de:
+
+- **Spotless** — valida a formatação do código seguindo o Google Java Format.
+- **Checkstyle** — audita o código contra as regras de estilo configuradas.
+
+### Build
+
+Executado somente depois que **Tests** e **Code Quality** forem concluídos com sucesso:
+
+```bash
+./mvnw clean package -DskipTests
+```
+
+Dessa forma, uma falha nos testes ou nas verificações de qualidade impede que o build final seja
+considerado válido.
+
+> O CI é uma camada de segurança do repositório. A mesma validação pode e deve ser executada
+> localmente antes do commit com `./mvnw clean verify`.
+
+---
+
+## ✅ Qualidade de Código e Testes
 
 O projeto possui um pipeline de qualidade integrado ao build (`mvn verify`) e executado
-automaticamente via **GitHub Actions** a cada push/PR para `main`:
+automaticamente via **GitHub Actions** a cada push/PR para `main`.
 
-- **Spotless** — formata o código automaticamente seguindo o Google Java Format
-  (`mvn spotless:apply`).
+### Formatação e estilo
+
+- **Spotless** — valida a formatação do código seguindo o Google Java Format (`mvn spotless:apply`
+  para aplicar as correções).
 - **Checkstyle** — audita o código contra o guia de estilo do Google e **falha o build** em caso de
   violação (`mvn checkstyle:check`).
-- **JUnit 5 + Mockito** — cobertura de testes unitários, incluindo testes de domínio isolados (sem
-  Spring Context) habilitados pela Arquitetura Hexagonal.
+
+### Testes automatizados
+
+- **JUnit 5** — framework utilizado para os testes automatizados.
+- **Mockito** — utilizado para isolar dependências e testar componentes individualmente.
+- **Testes unitários** — utilizados principalmente para regras de domínio, services e validadores,
+  evitando dependência desnecessária de infraestrutura externa.
+- **Testes de contexto** — utilizados quando é necessário verificar a inicialização e integração do
+  contexto Spring.
+
+A Arquitetura Hexagonal permite manter grande parte dos testes independente do Spring Context e do
+banco de dados, reduzindo o tempo de execução e tornando os testes mais determinísticos.
 
 ---
 
@@ -279,8 +370,9 @@ automaticamente via **GitHub Actions** a cada push/PR para `main`:
 
 - [x] **Etapa 1** — Modelagem de dados (PostgreSQL + Flyway), configuração de ambiente, arquitetura
   hexagonal definida, CI e tooling de qualidade
-- [ ] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs e validação (Customer/Staff) —
-  *em andamento: domínio, JPA, mappers e validação prontos; casos de uso e controllers pendentes*
+- [ ] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs, validação e testes unitários
+  (Customer/Staff) — *em andamento: domínio, JPA, mappers, validação e testes dos validadores
+  prontos; casos de uso e controllers pendentes*
 - [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT, ativação de conta e reset
   de senha via `user_tokens`
 - [ ] **Etapa 4** — Carrinho de compras e Pedidos

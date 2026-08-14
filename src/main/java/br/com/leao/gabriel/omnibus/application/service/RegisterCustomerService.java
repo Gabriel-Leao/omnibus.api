@@ -9,6 +9,9 @@ import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * Application service responsible for registering customers.
+ */
 @Service
 @RequiredArgsConstructor
 public class RegisterCustomerService implements RegisterCustomerUseCase {
@@ -16,6 +19,9 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
   private final PasswordEncoderPort passwordEncoder;
   private final CustomerRepositoryPort customerRepository;
 
+  /**
+   * Registers a customer after validating that the email is not already registered.
+   */
   @Override
   public Customer execute(String name, String email, String rawPassword, LocalDate birthDate,
       String photoUrl) {

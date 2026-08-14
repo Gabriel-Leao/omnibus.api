@@ -5,9 +5,15 @@ import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
+/**
+ * Maps customer domain objects to and from JPA entities.
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface CustomerPersistenceMapper {
 
+  /**
+   * Maps a customer domain object to its JPA entity.
+   */
   default CustomerJpaEntity toEntity(Customer customer) {
     CustomerJpaEntity entity = new CustomerJpaEntity();
     if (customer.getId() != null) {
@@ -23,6 +29,9 @@ public interface CustomerPersistenceMapper {
     return entity;
   }
 
+  /**
+   * Maps a customer JPA entity to its domain object.
+   */
   default Customer toDomain(CustomerJpaEntity entity) {
     return Customer.reconstruct(
         entity.getId().toString(),

@@ -5,6 +5,9 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import lombok.Getter;
 
+/**
+ * Domain model representing a staff account.
+ */
 @Getter
 public class Staff extends UserAccount {
 
@@ -34,6 +37,9 @@ public class Staff extends UserAccount {
     this.hiredAt = Objects.requireNonNull(hiredAt, "Hired at must not be null");
   }
 
+  /**
+   * Creates a staff member with administrator privileges.
+   */
   public static Staff createByAdmin(
       String name, String email, String passwordHash, StaffRole role,
       String employeeCode, StaffDepartment department) {
@@ -42,6 +48,9 @@ public class Staff extends UserAccount {
         role, employeeCode, department, LocalDate.now());
   }
 
+  /**
+   * Reconstructs a staff member from persisted data.
+   */
   public static Staff reconstruct(
       String id,
       String name,

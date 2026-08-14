@@ -13,6 +13,9 @@ import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * JPA entity representing the staff profile.
+ */
 @Getter
 @Setter
 @Entity

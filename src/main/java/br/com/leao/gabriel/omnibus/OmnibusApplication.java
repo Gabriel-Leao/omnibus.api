@@ -9,6 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class OmnibusApplication {
 
+  /**
+   * Starts the Omnibus API application.
+   */
   public static void main(String[] args) {
     SpringApplication.run(OmnibusApplication.class, args);
   }

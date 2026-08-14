@@ -4,6 +4,9 @@ import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.CustomerResponse;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import org.mapstruct.Mapper;
 
+/**
+ * Maps customer domain objects to web response DTOs.
+ */
 @Mapper(componentModel = "spring")
 public interface CustomerWebMapper {
 

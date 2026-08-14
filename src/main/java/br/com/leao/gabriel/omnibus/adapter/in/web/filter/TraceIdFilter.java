@@ -11,12 +11,20 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Adds a unique trace identifier to each HTTP request.
+ */
 @Component
 public class TraceIdFilter extends OncePerRequestFilter {
 
+  /** MDC key used to store the request trace identifier. */
   public static final String TRACE_ID_MDC_KEY = "traceId";
+  /** HTTP header used to expose the request trace identifier. */
   public static final String TRACE_ID_HEADER = "X-Trace-Id";
 
+  /**
+   * Processes an HTTP request while adding and clearing its trace identifier.
+   */
   @Override
   protected void doFilterInternal(
       @NonNull HttpServletRequest request,

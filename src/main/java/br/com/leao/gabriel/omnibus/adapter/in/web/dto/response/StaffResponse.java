@@ -6,6 +6,9 @@ import br.com.leao.gabriel.omnibus.domain.model.UserStatus;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
+/**
+ * Represents the staff data returned by the web API.
+ */
 public record StaffResponse(
     String id,
     String name,

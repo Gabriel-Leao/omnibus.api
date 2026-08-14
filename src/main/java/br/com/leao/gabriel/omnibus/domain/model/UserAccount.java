@@ -4,6 +4,9 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import lombok.Getter;
 
+/**
+ * Base domain model for user accounts.
+ */
 @Getter
 public abstract class UserAccount {
 

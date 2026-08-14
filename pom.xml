@@ -2,10 +2,13 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://maven.apache.org/POM/4.0.0"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <artifactId>omnibus</artifactId>
 
   <build>
     <plugins>
+
+      <!-- Spring Boot -->
       <plugin>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
@@ -16,71 +19,94 @@
             </exclude>
           </excludes>
         </configuration>
+
         <groupId>org.springframework.boot</groupId>
       </plugin>
+
+      <!-- Compiler -->
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <executions>
+
           <execution>
             <configuration>
               <annotationProcessorPaths>
+
                 <path>
                   <artifactId>lombok</artifactId>
                   <groupId>org.projectlombok</groupId>
                 </path>
+
                 <path>
                   <artifactId>mapstruct-processor</artifactId>
                   <groupId>org.mapstruct</groupId>
                   <version>${org.mapstruct.version}</version>
                 </path>
+
                 <path>
                   <artifactId>lombok-mapstruct-binding</artifactId>
                   <groupId>org.projectlombok</groupId>
                   <version>${lombok-mapstruct-binding.version}</version>
                 </path>
+
               </annotationProcessorPaths>
             </configuration>
             <goals>
               <goal>compile</goal>
             </goals>
+
             <id>default-compile</id>
+
             <phase>compile</phase>
           </execution>
+
           <execution>
             <configuration>
               <annotationProcessorPaths>
+
                 <path>
                   <artifactId>lombok</artifactId>
                   <groupId>org.projectlombok</groupId>
                 </path>
+
                 <path>
                   <artifactId>mapstruct-processor</artifactId>
                   <groupId>org.mapstruct</groupId>
                   <version>${org.mapstruct.version}</version>
                 </path>
+
                 <path>
                   <artifactId>lombok-mapstruct-binding</artifactId>
                   <groupId>org.projectlombok</groupId>
                   <version>${lombok-mapstruct-binding.version}</version>
                 </path>
+
               </annotationProcessorPaths>
             </configuration>
             <goals>
               <goal>testCompile</goal>
             </goals>
+
             <id>default-testCompile</id>
+
             <phase>test-compile</phase>
           </execution>
+
         </executions>
+
         <groupId>org.apache.maven.plugins</groupId>
       </plugin>
 
+      <!-- Spotless -->
       <plugin>
         <artifactId>spotless-maven-plugin</artifactId>
         <configuration>
+
           <formats>
             <format>
+
               <endWithNewline/>
+
               <includes>
                 <include>.gitattributes</include>
                 <include>.gitignore</include>
@@ -89,9 +115,12 @@
                 <spacesPerTab>4</spacesPerTab>
                 <tabs>true</tabs>
               </indent>
+
               <trimTrailingWhitespace/>
+
             </format>
           </formats>
+
           <java>
             <googleJavaFormat>
               <formatJavadoc>false</formatJavadoc>
@@ -100,15 +129,20 @@
               <version>1.8</version>
             </googleJavaFormat>
           </java>
+
         </configuration>
         <groupId>com.diffplug.spotless</groupId>
+
         <version>3.9.0</version>
       </plugin>
+
+      <!-- Checkstyle -->
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <configuration>
           <configLocation>google_checks.xml</configLocation>
           <consoleOutput>true</consoleOutput>
+          <excludeGeneratedSources>true</excludeGeneratedSources>
           <failsOnError>true</failsOnError>
           <violationSeverity>warning</violationSeverity>
         </configuration>
@@ -118,104 +152,152 @@
               <goal>check</goal>
             </goals>
             <id>checkstyle-check</id>
+
             <phase>verify</phase>
           </execution>
         </executions>
+
         <groupId>org.apache.maven.plugins</groupId>
+
         <version>3.5.0</version>
+
       </plugin>
+
     </plugins>
   </build>
 
   <dependencies>
+
+    <!-- MapStruct -->
     <dependency>
       <artifactId>mapstruct</artifactId>
       <groupId>org.mapstruct</groupId>
       <version>${org.mapstruct.version}</version>
     </dependency>
+
+    <!-- Spring -->
     <dependency>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
       <groupId>org.springframework.boot</groupId>
     </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-flyway</artifactId>
       <groupId>org.springframework.boot</groupId>
     </dependency>
+
+    <dependency>
+      <artifactId>spring-boot-starter-security</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-boot-starter-validation</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+    <!-- Flyway -->
     <dependency>
       <artifactId>flyway-database-postgresql</artifactId>
       <groupId>org.flywaydb</groupId>
     </dependency>
+
+    <!-- PostgreSQL -->
     <dependency>
       <artifactId>postgresql</artifactId>
       <groupId>org.postgresql</groupId>
       <scope>runtime</scope>
     </dependency>
-    <dependency>
-      <artifactId>spring-boot-starter-security</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>spring-boot-starter-validation</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
-    <dependency>
-      <artifactId>spring-boot-starter-webmvc</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
+
+    <!-- SpringDoc -->
     <dependency>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
       <groupId>org.springdoc</groupId>
       <version>3.0.2</version>
     </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <artifactId>lombok</artifactId>
+      <groupId>org.projectlombok</groupId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- DevTools -->
     <dependency>
       <artifactId>spring-boot-devtools</artifactId>
       <groupId>org.springframework.boot</groupId>
       <optional>true</optional>
       <scope>runtime</scope>
     </dependency>
-    <dependency>
-      <artifactId>lombok</artifactId>
-      <groupId>org.projectlombok</groupId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <artifactId>spring-boot-starter-actuator</artifactId>
-      <groupId>org.springframework.boot</groupId>
-    </dependency>
+
+    <!-- ===================================================== -->
+    <!-- TESTES                                                -->
+    <!-- ===================================================== -->
 
     <dependency>
       <artifactId>spring-boot-starter-data-jpa-test</artifactId>
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-flyway-test</artifactId>
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-security-test</artifactId>
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-validation-test</artifactId>
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-webmvc-test</artifactId>
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <artifactId>spring-boot-starter-actuator-test</artifactId>
       <groupId>org.springframework.boot</groupId>
       <scope>test</scope>
     </dependency>
+
+    <!-- Testcontainers -->
+    <dependency>
+      <artifactId>testcontainers-postgresql</artifactId>
+      <groupId>org.testcontainers</groupId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <groupId>org.testcontainers</groupId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
   <description>Omnibus API</description>
   <groupId>br.com.leao.gabriel</groupId>
+
   <modelVersion>4.0.0</modelVersion>
   <name>omnibus</name>
 

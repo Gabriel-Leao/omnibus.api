@@ -5,6 +5,9 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import lombok.Getter;
 
+/**
+ * Domain model representing a customer account.
+ */
 @Getter
 public class Customer extends UserAccount {
 
@@ -28,6 +31,9 @@ public class Customer extends UserAccount {
     this.photoUrl = photoUrl;
   }
 
+  /**
+   * Creates a new customer in the pending activation state.
+   */
   public static Customer register(
       String name, String email, String passwordHash, LocalDate birthDate, String photoUrl) {
     return new Customer(
@@ -35,6 +41,9 @@ public class Customer extends UserAccount {
         null, null, null, birthDate, photoUrl);
   }
 
+  /**
+   * Reconstructs a customer from persisted data.
+   */
   public static Customer reconstruct(
       String id,
       String name,
@@ -62,6 +71,9 @@ public class Customer extends UserAccount {
     return birthDate;
   }
 
+  /**
+   * Creates a customer instance marked as pending deletion.
+   */
   public Customer requestDeletion() {
     return new Customer(
         getId(), getName(), getEmail(), getPasswordHash(), UserStatus.PENDING_DELETION,

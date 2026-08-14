@@ -10,6 +10,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+/**
+ * Adapts customer persistence operations to the application's customer repository port.
+ */
 @Component
 @RequiredArgsConstructor
 public class CustomerPersistenceAdapter implements CustomerRepositoryPort {
@@ -17,6 +20,9 @@ public class CustomerPersistenceAdapter implements CustomerRepositoryPort {
   private final CustomerJpaRepository jpaRepository;
   private final CustomerPersistenceMapper mapper;
 
+  /**
+   * Persists a customer and returns the persisted domain object.
+   */
   @Override
   public Customer save(Customer customer) {
     CustomerJpaEntity entity = mapper.toEntity(customer);
@@ -24,6 +30,9 @@ public class CustomerPersistenceAdapter implements CustomerRepositoryPort {
     return mapper.toDomain(saved);
   }
 
+  /**
+   * Finds a customer by its identifier.
+   */
   @Override
   public Optional<Customer> findById(UUID id) {
     if (id == null) {
@@ -32,6 +41,9 @@ public class CustomerPersistenceAdapter implements CustomerRepositoryPort {
     return jpaRepository.findById(id).map(mapper::toDomain);
   }
 
+  /**
+   * Finds a customer by email address.
+   */
   @Override
   public Optional<Customer> findByEmail(String email) {
     if (email == null) {
@@ -40,6 +52,9 @@ public class CustomerPersistenceAdapter implements CustomerRepositoryPort {
     return jpaRepository.findByEmail(email).map(mapper::toDomain);
   }
 
+  /**
+   * Checks whether a customer exists with the given email.
+   */
   @Override
   public boolean existsByEmail(String email) {
     if (email == null) {

@@ -1,8 +1,8 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.dto.request;
 
-import br.com.leao.gabriel.omnibus.adapter.in.web.validation.minimunAge.MinimumAge;
-import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordConfirmable;
-import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordMatches;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.minimumage.MinimumAge;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordmatches.PasswordConfirmable;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordmatches.PasswordMatches;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PastOrPresent;
@@ -10,6 +10,9 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import org.hibernate.validator.constraints.URL;
 
+/**
+ * Represents and validates the data required to register a customer.
+ */
 @PasswordMatches
 public record RegisterCustomerRequest(
     @NotBlank(message = "Name can't be empty")

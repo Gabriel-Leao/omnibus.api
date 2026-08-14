@@ -20,6 +20,9 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Base JPA entity representing persisted user account data.
+ */
 @Getter
 @Setter
 @Entity

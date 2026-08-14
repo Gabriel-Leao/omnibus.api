@@ -9,6 +9,9 @@ import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * JPA entity representing the customer profile.
+ */
 @Getter
 @Setter
 @Entity

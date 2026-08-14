@@ -18,23 +18,29 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+/**
+ * Handles exceptions raised by the web layer and converts them into HTTP responses.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
   private static final Logger log =
       LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+  /**
+   * Handles validation errors raised by request argument validation.
+   */
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<ErrorResponseDTO> handleValidation(
+  public ResponseEntity<ErrorResponseDto> handleValidation(
       MethodArgumentNotValidException ex,
       HttpServletRequest request) {
 
-    List<ErrorResponseDTO.FieldErrorDTO> fieldErrors =
+    List<ErrorResponseDto.FieldErrorDto> fieldErrors =
         ex.getBindingResult()
             .getFieldErrors()
             .stream()
             .map(fe ->
-                new ErrorResponseDTO.FieldErrorDTO(
+                new ErrorResponseDto.FieldErrorDto(
                     fe.getField(),
                     fe.getDefaultMessage()))
             .toList();
@@ -50,8 +56,11 @@ public class GlobalExceptionHandler {
         fieldErrors);
   }
 
+  /**
+   * Handles requests with malformed JSON bodies.
+   */
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  public ResponseEntity<ErrorResponseDTO> handleMalformedJson(
+  public ResponseEntity<ErrorResponseDto> handleMalformedJson(
       HttpServletRequest request) {
 
     log.warn(
@@ -64,8 +73,11 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
+  /**
+   * Handles not-found domain exceptions.
+   */
   @ExceptionHandler(NotFoundException.class)
-  public ResponseEntity<ErrorResponseDTO> handleNotFound(
+  public ResponseEntity<ErrorResponseDto> handleNotFound(
       NotFoundException ex,
       HttpServletRequest request) {
 
@@ -80,8 +92,11 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
+  /**
+   * Handles domain conflict exceptions.
+   */
   @ExceptionHandler(ConflictException.class)
-  public ResponseEntity<ErrorResponseDTO> handleConflict(
+  public ResponseEntity<ErrorResponseDto> handleConflict(
       ConflictException ex,
       HttpServletRequest request) {
 
@@ -96,8 +111,11 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
+  /**
+   * Handles forbidden domain exceptions.
+   */
   @ExceptionHandler(ForbiddenException.class)
-  public ResponseEntity<ErrorResponseDTO> handleForbidden(
+  public ResponseEntity<ErrorResponseDto> handleForbidden(
       ForbiddenException ex,
       HttpServletRequest request) {
 
@@ -112,8 +130,11 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
+  /**
+   * Handles business rule violation exceptions.
+   */
   @ExceptionHandler(BusinessRuleViolationException.class)
-  public ResponseEntity<ErrorResponseDTO> handleBusinessRule(
+  public ResponseEntity<ErrorResponseDto> handleBusinessRule(
       BusinessRuleViolationException ex,
       HttpServletRequest request) {
 
@@ -128,8 +149,11 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
+  /**
+   * Handles invalid argument exceptions.
+   */
   @ExceptionHandler(IllegalArgumentException.class)
-  public ResponseEntity<ErrorResponseDTO> handleIllegalArgument(
+  public ResponseEntity<ErrorResponseDto> handleIllegalArgument(
       IllegalArgumentException ex,
       HttpServletRequest request) {
 
@@ -144,8 +168,11 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
+  /**
+   * Handles unexpected exceptions.
+   */
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<ErrorResponseDTO> handleUnexpected(
+  public ResponseEntity<ErrorResponseDto> handleUnexpected(
       Exception ex,
       HttpServletRequest request) {
 
@@ -160,16 +187,16 @@ public class GlobalExceptionHandler {
         List.of());
   }
 
-  private ResponseEntity<ErrorResponseDTO> build(
+  private ResponseEntity<ErrorResponseDto> build(
       HttpStatus status,
       String message,
-      List<ErrorResponseDTO.FieldErrorDTO> fieldErrors) {
+      List<ErrorResponseDto.FieldErrorDto> fieldErrors) {
 
     String traceId =
         MDC.get(TraceIdFilter.TRACE_ID_MDC_KEY);
 
-    ErrorResponseDTO body =
-        new ErrorResponseDTO(
+    ErrorResponseDto body =
+        new ErrorResponseDto(
             OffsetDateTime.now(),
             status.value(),
             message,

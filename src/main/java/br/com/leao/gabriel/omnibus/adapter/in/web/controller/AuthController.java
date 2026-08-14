@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Exposes authentication and customer registration endpoints.
+ */
 @RestController
 @RequestMapping("auth")
 @RequiredArgsConstructor
@@ -22,6 +25,9 @@ public class AuthController {
   private final RegisterCustomerUseCase registerCustomerUseCase;
   private final CustomerWebMapper customerWebMapper;
 
+  /**
+   * Registers a customer from an HTTP request.
+   */
   @PostMapping("/register")
   public ResponseEntity<CustomerResponse> createCustomer(
       @Valid

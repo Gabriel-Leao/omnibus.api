@@ -1,15 +1,21 @@
-package br.com.leao.gabriel.omnibus.adapter.in.web.validation.enumValue;
+package br.com.leao.gabriel.omnibus.adapter.in.web.validation.enumvalue;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+/**
+ * Validates values against the constants of a configured enum.
+ */
 public class EnumValueValidator implements ConstraintValidator<EnumValue, String> {
 
   private Class<? extends Enum<?>> enumClass;
   private String allowedValues;
 
+  /**
+   * Initializes the validator with the enum type configured by the constraint.
+   */
   @Override
   public void initialize(EnumValue constraintAnnotation) {
     this.enumClass = constraintAnnotation.enumClass();
@@ -18,6 +24,9 @@ public class EnumValueValidator implements ConstraintValidator<EnumValue, String
         .collect(Collectors.joining(", "));
   }
 
+  /**
+   * Checks whether the supplied value is a valid enum constant.
+   */
   @Override
   public boolean isValid(String value, ConstraintValidatorContext context) {
     if (value == null) {

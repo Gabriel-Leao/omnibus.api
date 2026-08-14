@@ -1,8 +1,8 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.dto.request;
 
-import br.com.leao.gabriel.omnibus.adapter.in.web.validation.enumValue.EnumValue;
-import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordConfirmable;
-import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordMatches.PasswordMatches;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.enumvalue.EnumValue;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordmatches.PasswordConfirmable;
+import br.com.leao.gabriel.omnibus.adapter.in.web.validation.passwordmatches.PasswordMatches;
 import br.com.leao.gabriel.omnibus.domain.model.StaffDepartment;
 import br.com.leao.gabriel.omnibus.domain.model.StaffRole;
 import jakarta.validation.constraints.Email;
@@ -11,6 +11,9 @@ import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
+/**
+ * Represents and validates the data required to register a staff member.
+ */
 @PasswordMatches
 public record RegisterStaffRequest(
     @NotBlank(message = "Name can't be empty")

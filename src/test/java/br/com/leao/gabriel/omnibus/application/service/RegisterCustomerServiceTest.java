@@ -1,71 +1,94 @@
 package br.com.leao.gabriel.omnibus.application.service;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import br.com.leao.gabriel.omnibus.domain.exception.EmailAlreadyRegisteredException;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
+import br.com.leao.gabriel.omnibus.domain.port.out.ActivationCodeSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import java.time.LocalDate;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * Unit tests for {@link RegisterCustomerService}, exercised in complete isolation from Spring — no
+ * application context, no database — which is the practical benefit of keeping the domain and
+ * application layers free of framework dependencies.
+ */
 @ExtendWith(MockitoExtension.class)
 class RegisterCustomerServiceTest {
 
-  @Mock private PasswordEncoderPort passwordEncoder;
+  private static final String NAME = "Gabriel Leão";
+  private static final String EMAIL = "gabriel@teste.com";
+  private static final String RAW_PASSWORD = "senha1234";
+  private static final String HASHED_PASSWORD = "hashed-password";
+  private static final LocalDate BIRTH_DATE = LocalDate.of(2000, 1, 1);
 
-  @Mock private CustomerRepositoryPort customerRepository;
+  @Mock
+  private CustomerRepositoryPort customerRepository;
+  @Mock
+  private PasswordEncoderPort passwordEncoder;
+  @Mock
+  private ActivationCodeSenderPort activationCodeSender;
 
-  @InjectMocks private RegisterCustomerService service;
+  private RegisterCustomerService service;
 
-  @Test
-  void shouldRegisterCustomerSuccessfully() {
-    var name = "Gabriel";
-    var email = "gabriel@email.com";
-    var rawPassword = "password123";
-    var hashedPassword = "hashed-password";
-    var birthDate = LocalDate.of(2000, 1, 1);
-    var photoUrl = "https://example.com/photo.jpg";
-
-    var savedCustomer = Customer.register(name, email, hashedPassword, birthDate, photoUrl);
-
-    when(customerRepository.existsByEmail(email)).thenReturn(false);
-
-    when(passwordEncoder.encode(rawPassword)).thenReturn(hashedPassword);
-
-    when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
-
-    var result = service.execute(name, email, rawPassword, birthDate, photoUrl);
-
-    assertThat(result).isSameAs(savedCustomer);
-
-    verify(customerRepository).existsByEmail(email);
-    verify(passwordEncoder).encode(rawPassword);
-    verify(customerRepository).save(any(Customer.class));
+  @org.junit.jupiter.api.BeforeEach
+  void setUp() {
+    service =
+        new RegisterCustomerService(customerRepository, passwordEncoder, activationCodeSender);
   }
 
   @Test
-  void shouldNotRegisterCustomerWhenEmailIsAlreadyRegistered() {
-    var email = "gabriel@email.com";
+  @DisplayName("Should hash the password, persist the customer and send an activation code")
+  void shouldRegisterNewCustomerSuccessfully() {
+    when(customerRepository.existsByEmail(EMAIL)).thenReturn(false);
+    when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
+    when(customerRepository.save(any(Customer.class))).thenAnswer(
+        invocation -> invocation.getArgument(0));
 
-    when(customerRepository.existsByEmail(email)).thenReturn(true);
+    service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, null);
 
-    assertThatThrownBy(
-            () -> service.execute("Gabriel", email, "password123", LocalDate.of(2000, 1, 1), null))
-        .isInstanceOf(EmailAlreadyRegisteredException.class);
+    ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
+    verify(customerRepository).save(customerCaptor.capture());
 
-    verify(customerRepository).existsByEmail(email);
-    verifyNoInteractions(passwordEncoder);
-    verify(customerRepository, never()).save(any());
+    Customer persistedCustomer = customerCaptor.getValue();
+    assertThat(persistedCustomer.getName()).isEqualTo(NAME);
+    assertThat(persistedCustomer.getEmail()).isEqualTo(EMAIL);
+    assertThat(persistedCustomer.getPasswordHash()).isEqualTo(HASHED_PASSWORD);
+
+    verify(activationCodeSender).sendActivationCode(persistedCustomer);
+    verify(activationCodeSender, never()).sendDuplicateRegistrationNotice(anyString());
+  }
+
+  @Test
+  @DisplayName("Should not persist and should send a duplicate notice when the email is already taken")
+  void shouldNotifyDuplicateRegistrationWithoutPersisting() {
+    when(customerRepository.existsByEmail(EMAIL)).thenReturn(true);
+
+    service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, null);
+
+    verify(customerRepository, never()).save(any(Customer.class));
+    verify(passwordEncoder, never()).encode(anyString());
+    verify(activationCodeSender).sendDuplicateRegistrationNotice(EMAIL);
+    verify(activationCodeSender, never()).sendActivationCode(any(Customer.class));
+  }
+
+  @Test
+  @DisplayName("Should complete without throwing regardless of the email already existing")
+  void shouldNeverThrowRegardlessOfOutcome() {
+    when(customerRepository.existsByEmail(EMAIL)).thenReturn(true);
+
+    org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+        () -> service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, null));
   }
 }

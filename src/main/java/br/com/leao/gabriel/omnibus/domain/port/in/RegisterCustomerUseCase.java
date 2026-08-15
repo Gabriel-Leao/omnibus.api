@@ -1,16 +1,15 @@
 package br.com.leao.gabriel.omnibus.domain.port.in;
 
-import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import java.time.LocalDate;
 
 /**
- * Input port for registering a customer.
+ * Use case for registering a new customer account.
+ *
+ * <p>Deliberately returns no result: whether the email was already registered or not, the caller
+ * receives no distinguishable outcome, preventing user enumeration via the registration endpoint's
+ * response.
  */
 public interface RegisterCustomerUseCase {
 
-  /**
-   * Registers a customer using the supplied registration data.
-   */
-  Customer execute(
-      String name, String email, String rawPassword, LocalDate birthDate, String photoUrl);
+  void execute(String name, String email, String rawPassword, LocalDate birthDate, String photoUrl);
 }

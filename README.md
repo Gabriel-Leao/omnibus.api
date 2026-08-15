@@ -12,10 +12,10 @@ práticas de engenharia de software e um pipeline de qualidade de código reprod
 
 Este projeto está em desenvolvimento incremental, documentado publicamente como parte do meu
 processo de aprendizado. A fundação (modelagem de dados, migrations, configuração de ambiente, CI,
-arquitetura hexagonal e pipeline de qualidade) está pronta, e o domínio de **contas de usuário**
-(clientes e funcionários) está em construção de ponta a ponta — domínio, persistência, DTOs,
-validação customizada e testes unitários já existem; casos de uso, controllers e autenticação (JWT)
-ainda estão sendo implementados (veja o [Roadmap](#-roadmap)).
+arquitetura hexagonal e pipeline de qualidade) está pronta. O fluxo de **registro e autenticação de
+`Customer`** está completo e testado de ponta a ponta (domínio, persistência, validação, JWT e
+testes unitários); o fluxo equivalente de `Staff` (criação restrita a administradores) ainda está
+pendente (veja o [Roadmap](#-roadmap)).
 
 ---
 
@@ -28,7 +28,7 @@ ainda estão sendo implementados (veja o [Roadmap](#-roadmap)).
 | Persistência            | Spring Data JPA + Hibernate                                         |
 | Banco de Dados          | PostgreSQL 17 (via Docker Compose)                                  |
 | Migrations              | Flyway                                                              |
-| Segurança               | Spring Security + JWT                                               |
+| Segurança               | Spring Security + JWT (JJWT)                                        |
 | Documentação de API     | SpringDoc OpenAPI (Swagger UI)                                      |
 | Mapeamento DTO ↔ Entity | MapStruct                                                           |
 | Boilerplate             | Lombok                                                              |
@@ -121,10 +121,12 @@ explícita de onde morar:
 | `JwtAuthenticationFilter` | Intercepta a requisição HTTP e extrai o token | `adapter/in/web/security/` | Reage a uma requisição chegando — é entrada.                                                       |
 | `SecurityConfig`          | Configuração do `SecurityFilterChain`         | `config/`                  | Fiação de infraestrutura pura; forçar isso em porta/adapter gera mais confusão que clareza.        |
 
-> ⚠️ **Nota temporária**: enquanto a Etapa 3 (JWT) não é implementada, `SecurityConfig` libera todas
-> as rotas (`anyRequest().permitAll()`) para permitir o desenvolvimento e teste dos demais módulos sem
-> autenticação. Isso será substituído por uma whitelist granular assim que a autenticação estiver
-> pronta.
+> ⚠️ **Nota temporária**: `/auth/**` já é validada por JWT via `JwtAuthenticationFilter`, e
+> `@PreAuthorize` (com `RoleHierarchy`: `ADMIN` ⊃ `EDITOR` ⊃ `MANAGER` ⊃ `VIEWER`) já está
+> disponível
+> para uso em métodos de service/controller. As demais rotas continuam liberadas
+> (`anyRequest().permitAll()`) simplesmente porque os módulos de catálogo e pedidos ainda não
+> existem — a whitelist será restringida rota a rota conforme cada módulo for implementado.
 
 ---
 
@@ -189,7 +191,44 @@ Spring Context ou infraestrutura externa.
 
 Um `@RestControllerAdvice` centralizado (`GlobalExceptionHandler`) traduz exceções de
 domínio/validação em respostas HTTP padronizadas, incluindo um `traceId` gerado por requisição (via
-`MDC`) para correlacionar logs e respostas de erro.
+`MDC`) para correlacionar logs e respostas de erro. As exceções de domínio seguem uma hierarquia por
+categoria (`NotFoundException`, `ConflictException`, `ForbiddenException`,
+`BusinessRuleViolationException`), de forma que novas exceções específicas (em produtos, pedidos,
+etc.) nunca exigem alterar o handler central — basta estender a categoria correta.
+
+---
+
+## 🔐 Autenticação (JWT)
+
+Login e emissão de token seguem a mesma separação de portas/adapters do restante do projeto:
+
+- **`LoginUseCase`** (porta de entrada) é implementada por `AuthenticationService`, que localiza a
+  conta (checando `Customer` e depois `Staff`, já que o e-mail não indica o tipo por si só), valida
+  a senha e o status (`ACTIVE`), e delega a emissão do token a `TokenIssuerPort` — uma porta de
+  saída que não sabe que o token emitido é especificamente um JWT.
+- **`JwtTokenIssuerAdapter`** e **`JwtTokenParser`** (`adapter/out/security/`) concentram toda a
+  dependência de `io.jsonwebtoken` — se o mecanismo de token mudasse amanhã, nenhuma linha do
+  domínio ou da aplicação precisaria mudar.
+- **`JwtAuthenticationFilter`** (`adapter/in/web/security/`) intercepta cada requisição, valida o
+  token do header `Authorization` e popula o `SecurityContext`, habilitando `@PreAuthorize` nos
+  services/controllers.
+- **`RoleHierarchy`** (`SecurityConfig`) declara que `ADMIN` implica `EDITOR`, que implica
+  `MANAGER`, que implica `VIEWER` — uma única checagem `hasRole('VIEWER')` já admite os três papéis
+  superiores, sem repetir a cadeia de permissões em cada rota.
+
+### Prevenção de enumeração de usuários (User Enumeration)
+
+`POST /auth/register` devolve **sempre a mesma resposta** (`202 Accepted` com uma mensagem
+genérica), independentemente de o e-mail já estar cadastrado ou não — o resultado real (código de
+ativação ou aviso de tentativa de registro duplicado) é comunicado exclusivamente por e-mail, nunca
+pela resposta HTTP. Da mesma forma, `POST /auth/login` nunca distingue "e-mail não encontrado" de
+"senha incorreta", sempre respondendo com o mesmo erro genérico. Isso evita que um atacante use
+essas respostas para descobrir quais e-mails possuem conta na plataforma — uma vulnerabilidade real
+e catalogada (CWE-203 / OWASP API Security).
+
+Como consequência dessa decisão, `RegisterCustomerUseCase.execute()` não retorna o `Customer`
+criado nem um token — o cliente precisa ativar a conta (fluxo de código de ativação por e-mail,
+ainda pendente) e então autenticar via `POST /auth/login` separadamente.
 
 ---
 
@@ -370,11 +409,12 @@ banco de dados, reduzindo o tempo de execução e tornando os testes mais determ
 
 - [x] **Etapa 1** — Modelagem de dados (PostgreSQL + Flyway), configuração de ambiente, arquitetura
   hexagonal definida, CI e tooling de qualidade
-- [ ] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs, validação e testes unitários
-  (Customer/Staff) — *em andamento: domínio, JPA, mappers, validação e testes dos validadores
-  prontos; casos de uso e controllers pendentes*
-- [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT, ativação de conta e reset
-  de senha via `user_tokens`
+- [x] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs, validação e testes unitários
+  para `Customer` — registro (sem enumeração de e-mail) e testes de `RegisterCustomerService`
+- [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT — *em andamento: login,
+  `JwtAuthenticationFilter`, `RoleHierarchy` e testes de `AuthenticationService` prontos; ainda
+  faltam: criação de `Staff` (restrita a `ADMIN`), ativação de conta por código enviado por e-mail e
+  reset de senha via `user_tokens`*
 - [ ] **Etapa 4** — Carrinho de compras e Pedidos
 - [ ] **Etapa 5** — Wishlist com notificação de reposição de estoque
 

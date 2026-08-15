@@ -11,10 +11,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  h2:
-    console:
-      enabled: false
-
 logging:
   level:
     org.hibernate.SQL: warn

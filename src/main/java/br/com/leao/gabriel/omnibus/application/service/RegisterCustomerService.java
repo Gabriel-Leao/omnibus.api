@@ -1,8 +1,8 @@
 package br.com.leao.gabriel.omnibus.application.service;
 
-import br.com.leao.gabriel.omnibus.domain.exception.EmailAlreadyRegisteredException;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.port.in.RegisterCustomerUseCase;
+import br.com.leao.gabriel.omnibus.domain.port.out.ActivationCodeSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import java.time.LocalDate;
@@ -10,27 +10,29 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * Application service responsible for registering customers.
+ * Handles customer registration. To avoid user enumeration, this service always completes
+ * successfully from the caller's perspective, regardless of whether the email address was already
+ * registered — the actual outcome is only communicated via email.
  */
 @Service
 @RequiredArgsConstructor
 public class RegisterCustomerService implements RegisterCustomerUseCase {
 
-  private final PasswordEncoderPort passwordEncoder;
   private final CustomerRepositoryPort customerRepository;
+  private final PasswordEncoderPort passwordEncoder;
+  private final ActivationCodeSenderPort activationCodeSender;
 
-  /**
-   * Registers a customer after validating that the email is not already registered.
-   */
   @Override
-  public Customer execute(
+  public void execute(
       String name, String email, String rawPassword, LocalDate birthDate, String photoUrl) {
-    var isEmailTaken = customerRepository.existsByEmail(email);
-    if (isEmailTaken) {
-      throw new EmailAlreadyRegisteredException(email);
+    if (customerRepository.existsByEmail(email)) {
+      activationCodeSender.sendDuplicateRegistrationNotice(email);
+      return;
     }
-    var hashedPassword = passwordEncoder.encode(rawPassword);
-    var customer = Customer.register(name, email, hashedPassword, birthDate, photoUrl);
-    return customerRepository.save(customer);
+
+    var passwordHash = passwordEncoder.encode(rawPassword);
+    Customer customer = Customer.register(name, email, passwordHash, birthDate, photoUrl);
+    Customer savedCustomer = customerRepository.save(customer);
+    activationCodeSender.sendActivationCode(savedCustomer);
   }
 }

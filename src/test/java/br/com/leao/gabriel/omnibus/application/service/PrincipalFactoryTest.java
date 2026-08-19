@@ -21,11 +21,9 @@ class PrincipalFactoryTest {
 
   private final PrincipalFactory factory = new PrincipalFactory();
 
-  @Mock
-  private Customer customer;
+  @Mock private Customer customer;
 
-  @Mock
-  private Staff staff;
+  @Mock private Staff staff;
 
   @Test
   @DisplayName("Should create customer principal with ROLE_CUSTOMER")
@@ -37,8 +35,7 @@ class PrincipalFactoryTest {
 
     assertThat(principal.id()).isEqualTo(ID);
     assertThat(principal.email()).isEqualTo(EMAIL);
-    assertThat(principal.authorities())
-        .containsExactly("ROLE_CUSTOMER");
+    assertThat(principal.authorities()).containsExactly("ROLE_CUSTOMER");
   }
 
   @Test
@@ -52,8 +49,7 @@ class PrincipalFactoryTest {
 
     assertThat(principal.id()).isEqualTo(ID);
     assertThat(principal.email()).isEqualTo(EMAIL);
-    assertThat(principal.authorities())
-        .containsExactly("ROLE_EDITOR");
+    assertThat(principal.authorities()).containsExactly("ROLE_EDITOR");
   }
 
   @Test
@@ -69,8 +65,7 @@ class PrincipalFactoryTest {
 
       assertThat(principal.id()).isEqualTo(ID);
       assertThat(principal.email()).isEqualTo(EMAIL);
-      assertThat(principal.authorities())
-          .containsExactly("ROLE_" + role.name());
+      assertThat(principal.authorities()).containsExactly("ROLE_" + role.name());
     }
   }
 }

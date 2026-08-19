@@ -18,8 +18,8 @@ public class PrincipalFactory {
    * Builds the principal representing an authenticated {@link Customer}.
    */
   public AuthenticatedPrincipal forCustomer(Customer customer) {
-    return new AuthenticatedPrincipal(customer.getId(), customer.getEmail(),
-        Set.of("ROLE_CUSTOMER"));
+    return new AuthenticatedPrincipal(
+        customer.getId(), customer.getEmail(), Set.of("ROLE_CUSTOMER"));
   }
 
   /**

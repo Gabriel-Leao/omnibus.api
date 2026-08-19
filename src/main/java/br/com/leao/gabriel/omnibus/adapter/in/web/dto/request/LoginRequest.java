@@ -6,11 +6,4 @@ import jakarta.validation.constraints.NotBlank;
 /**
  * Request payload for authenticating with email and password.
  */
-public record LoginRequest(
-    @NotBlank
-    @Email
-    String email,
-    @NotBlank
-    String password) {
-
-}
+public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}

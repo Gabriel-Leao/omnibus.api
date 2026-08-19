@@ -9,6 +9,4 @@ import jakarta.validation.constraints.Pattern;
  */
 public record ActivateAccountRequest(
     @NotBlank @Email String email,
-    @NotBlank @Pattern(regexp = "^\\d{6}$", message = "Code must be 6 digits") String code) {
-
-}
+    @NotBlank @Pattern(regexp = "^\\d{6}$", message = "Code must be 6 digits") String code) {}

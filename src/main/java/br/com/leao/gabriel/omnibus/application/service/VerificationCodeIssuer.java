@@ -55,8 +55,8 @@ public class VerificationCodeIssuer {
     String code = otpGenerator.generateCode();
     String codeHash = otpGenerator.hash(code);
     UserToken token =
-        UserToken.issue(userId, codeHash, type,
-            OffsetDateTime.now().plusMinutes(expirationMinutes));
+        UserToken.issue(
+            userId, codeHash, type, OffsetDateTime.now().plusMinutes(expirationMinutes));
     userTokenRepository.save(token);
     return code;
   }

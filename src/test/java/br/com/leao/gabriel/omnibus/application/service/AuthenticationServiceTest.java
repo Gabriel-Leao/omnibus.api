@@ -37,23 +37,17 @@ class AuthenticationServiceTest {
   private static final String PASSWORD_HASH = "hashed-password";
   private static final String ISSUED_TOKEN = "signed.jwt.token";
 
-  @Mock
-  private CustomerRepositoryPort customerRepository;
+  @Mock private CustomerRepositoryPort customerRepository;
 
-  @Mock
-  private StaffRepositoryPort staffRepository;
+  @Mock private StaffRepositoryPort staffRepository;
 
-  @Mock
-  private PasswordEncoderPort passwordEncoder;
+  @Mock private PasswordEncoderPort passwordEncoder;
 
-  @Mock
-  private TokenIssuerPort tokenIssuer;
+  @Mock private TokenIssuerPort tokenIssuer;
 
-  @Mock
-  private PrincipalFactory principalFactory;
+  @Mock private PrincipalFactory principalFactory;
 
-  @Mock
-  private AuthenticatedPrincipal principal;
+  @Mock private AuthenticatedPrincipal principal;
 
   private AuthenticationService service;
 
@@ -61,11 +55,7 @@ class AuthenticationServiceTest {
   void setUp() {
     service =
         new AuthenticationService(
-            customerRepository,
-            staffRepository,
-            passwordEncoder,
-            tokenIssuer,
-            principalFactory);
+            customerRepository, staffRepository, passwordEncoder, tokenIssuer, principalFactory);
   }
 
   @Test
@@ -114,9 +104,7 @@ class AuthenticationServiceTest {
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(false);
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
     verifyNoInteractions(tokenIssuer, principalFactory);
   }
@@ -130,9 +118,7 @@ class AuthenticationServiceTest {
     when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.of(staff));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(false);
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
     verifyNoInteractions(tokenIssuer, principalFactory);
   }
@@ -145,9 +131,7 @@ class AuthenticationServiceTest {
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
     verifyNoInteractions(tokenIssuer, principalFactory);
   }
@@ -174,9 +158,7 @@ class AuthenticationServiceTest {
     when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.of(staff));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
     verifyNoInteractions(tokenIssuer, principalFactory);
   }
@@ -187,9 +169,7 @@ class AuthenticationServiceTest {
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
     when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
     verifyNoInteractions(passwordEncoder, tokenIssuer, principalFactory);
   }

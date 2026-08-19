@@ -30,8 +30,12 @@ public class SmtpActivationCodeSenderAdapter implements ActivationCodeSenderPort
       message.setTo(customer.getEmail());
       message.setSubject("Confirme sua conta Omnibus");
       message.setText(
-          "Olá, " + customer.getName() + "!\n\n"
-              + "Seu código de ativação é: " + code + "\n\n"
+          "Olá, "
+              + customer.getName()
+              + "!\n\n"
+              + "Seu código de ativação é: "
+              + code
+              + "\n\n"
               + "Esse código expira em 15 minutos.");
       mailSender.send(message);
     } catch (MailException e) {

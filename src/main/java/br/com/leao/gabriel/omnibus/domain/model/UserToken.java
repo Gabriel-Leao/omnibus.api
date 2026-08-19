@@ -118,7 +118,14 @@ public class UserToken {
    */
   public UserToken markUsed() {
     return new UserToken(
-        id, userId, codeHash, type, targetEmail, attempts, expiresAt, createdAt,
+        id,
+        userId,
+        codeHash,
+        type,
+        targetEmail,
+        attempts,
+        expiresAt,
+        createdAt,
         OffsetDateTime.now());
   }
 

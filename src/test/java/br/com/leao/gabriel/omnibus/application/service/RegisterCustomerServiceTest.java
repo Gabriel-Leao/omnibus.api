@@ -32,25 +32,18 @@ class RegisterCustomerServiceTest {
   private static final String HASHED_PASSWORD = "hashed-password";
   private static final String CUSTOMER_ID = "customer-id";
   private static final String GENERATED_CODE = "482913";
-  private static final LocalDate BIRTH_DATE =
-      LocalDate.of(2000, 1, 1);
-  private static final String PHOTO_URL =
-      "https://example.com/photo.jpg";
+  private static final LocalDate BIRTH_DATE = LocalDate.of(2000, 1, 1);
+  private static final String PHOTO_URL = "https://example.com/photo.jpg";
 
-  @Mock
-  private CustomerRepositoryPort customerRepository;
+  @Mock private CustomerRepositoryPort customerRepository;
 
-  @Mock
-  private PasswordEncoderPort passwordEncoder;
+  @Mock private PasswordEncoderPort passwordEncoder;
 
-  @Mock
-  private ActivationCodeSenderPort activationCodeSender;
+  @Mock private ActivationCodeSenderPort activationCodeSender;
 
-  @Mock
-  private VerificationCodeIssuer verificationCodeIssuer;
+  @Mock private VerificationCodeIssuer verificationCodeIssuer;
 
-  @Mock
-  private Customer savedCustomer;
+  @Mock private Customer savedCustomer;
 
   private RegisterCustomerService service;
 
@@ -58,38 +51,25 @@ class RegisterCustomerServiceTest {
   void setUp() {
     service =
         new RegisterCustomerService(
-            customerRepository,
-            passwordEncoder,
-            activationCodeSender,
-            verificationCodeIssuer);
+            customerRepository, passwordEncoder, activationCodeSender, verificationCodeIssuer);
   }
 
   @Test
   @DisplayName("Should register new customer")
   void shouldRegisterNewCustomer() {
     when(customerRepository.existsByEmail(EMAIL)).thenReturn(false);
-    when(passwordEncoder.encode(RAW_PASSWORD))
-        .thenReturn(HASHED_PASSWORD);
+    when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(HASHED_PASSWORD);
 
-    when(customerRepository.save(any(Customer.class)))
-        .thenReturn(savedCustomer);
+    when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
 
     when(savedCustomer.getId()).thenReturn(CUSTOMER_ID);
 
-    when(verificationCodeIssuer.issue(
-        CUSTOMER_ID,
-        TokenType.ACCOUNT_ACTIVATION))
+    when(verificationCodeIssuer.issue(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
         .thenReturn(GENERATED_CODE);
 
-    service.execute(
-        NAME,
-        EMAIL,
-        RAW_PASSWORD,
-        BIRTH_DATE,
-        PHOTO_URL);
+    service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, PHOTO_URL);
 
-    ArgumentCaptor<Customer> captor =
-        ArgumentCaptor.forClass(Customer.class);
+    ArgumentCaptor<Customer> captor = ArgumentCaptor.forClass(Customer.class);
 
     verify(customerRepository).save(captor.capture());
 
@@ -97,66 +77,42 @@ class RegisterCustomerServiceTest {
 
     assertThat(customer.getName()).isEqualTo(NAME);
     assertThat(customer.getEmail()).isEqualTo(EMAIL);
-    assertThat(customer.getPasswordHash())
-        .isEqualTo(HASHED_PASSWORD);
-    assertThat(customer.getBirthDate())
-        .isEqualTo(BIRTH_DATE);
-    assertThat(customer.getPhotoUrl())
-        .isEqualTo(PHOTO_URL);
+    assertThat(customer.getPasswordHash()).isEqualTo(HASHED_PASSWORD);
+    assertThat(customer.getBirthDate()).isEqualTo(BIRTH_DATE);
+    assertThat(customer.getPhotoUrl()).isEqualTo(PHOTO_URL);
 
     verify(passwordEncoder).encode(RAW_PASSWORD);
 
-    verify(verificationCodeIssuer)
-        .issue(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION);
+    verify(verificationCodeIssuer).issue(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION);
 
-    verify(activationCodeSender)
-        .sendActivationCode(savedCustomer, GENERATED_CODE);
+    verify(activationCodeSender).sendActivationCode(savedCustomer, GENERATED_CODE);
 
-    verify(activationCodeSender, never())
-        .sendDuplicateRegistrationNotice(anyString());
+    verify(activationCodeSender, never()).sendDuplicateRegistrationNotice(anyString());
   }
 
   @Test
   @DisplayName("Should send duplicate notice without creating customer")
   void shouldHandleDuplicateEmail() {
-    when(customerRepository.existsByEmail(EMAIL))
-        .thenReturn(true);
+    when(customerRepository.existsByEmail(EMAIL)).thenReturn(true);
 
-    service.execute(
-        NAME,
-        EMAIL,
-        RAW_PASSWORD,
-        BIRTH_DATE,
-        PHOTO_URL);
+    service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, PHOTO_URL);
 
-    verify(activationCodeSender)
-        .sendDuplicateRegistrationNotice(EMAIL);
+    verify(activationCodeSender).sendDuplicateRegistrationNotice(EMAIL);
 
-    verify(customerRepository, never())
-        .save(any(Customer.class));
+    verify(customerRepository, never()).save(any(Customer.class));
 
-    verify(passwordEncoder, never())
-        .encode(anyString());
+    verify(passwordEncoder, never()).encode(anyString());
 
     verifyNoInteractions(verificationCodeIssuer);
 
-    verify(activationCodeSender, never())
-        .sendActivationCode(any(), anyString());
+    verify(activationCodeSender, never()).sendActivationCode(any(), anyString());
   }
 
   @Test
   @DisplayName("Should not throw for duplicate email")
   void shouldNotThrowForDuplicateEmail() {
-    when(customerRepository.existsByEmail(EMAIL))
-        .thenReturn(true);
+    when(customerRepository.existsByEmail(EMAIL)).thenReturn(true);
 
-    assertDoesNotThrow(
-        () ->
-            service.execute(
-                NAME,
-                EMAIL,
-                RAW_PASSWORD,
-                BIRTH_DATE,
-                PHOTO_URL));
+    assertDoesNotThrow(() -> service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, PHOTO_URL));
   }
 }

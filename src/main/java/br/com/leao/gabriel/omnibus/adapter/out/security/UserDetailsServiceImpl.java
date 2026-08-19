@@ -25,8 +25,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     return customerRepository
         .findByEmail(email)
         .<UserDetails>map(
-            c -> UserPrincipal.ofCustomer(c.getId(), c.getEmail(), c.getPasswordHash(),
-                c.getStatus()))
+            c ->
+                UserPrincipal.ofCustomer(
+                    c.getId(), c.getEmail(), c.getPasswordHash(), c.getStatus()))
         .or(
             () ->
                 staffRepository

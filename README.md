@@ -27,8 +27,10 @@ pendente (veja o [Roadmap](#-roadmap)).
 | Framework               | Spring Boot 4.0.7                                                   |
 | Persistência            | Spring Data JPA + Hibernate                                         |
 | Banco de Dados          | PostgreSQL 17 (via Docker Compose)                                  |
+| Cache / Rate limiting   | Redis 7 (via Docker Compose)                                        |
 | Migrations              | Flyway                                                              |
 | Segurança               | Spring Security + JWT (JJWT)                                        |
+| E-mail                  | Spring Mail (Mailtrap em dev)                                       |
 | Documentação de API     | SpringDoc OpenAPI (Swagger UI)                                      |
 | Mapeamento DTO ↔ Entity | MapStruct                                                           |
 | Boilerplate             | Lombok                                                              |
@@ -227,14 +229,52 @@ essas respostas para descobrir quais e-mails possuem conta na plataforma — uma
 e catalogada (CWE-203 / OWASP API Security).
 
 Como consequência dessa decisão, `RegisterCustomerUseCase.execute()` não retorna o `Customer`
-criado nem um token — o cliente precisa ativar a conta (fluxo de código de ativação por e-mail,
-ainda pendente) e então autenticar via `POST /auth/login` separadamente.
+criado nem um token — o resultado real chega apenas por e-mail.
+
+### Ativação de conta por código (OTP)
+
+Em vez de um link de ativação, a conta é confirmada por um **código numérico de 6 dígitos**
+(mais amigável em mobile, evita problemas com scanners de e-mail corporativos "clicando"
+automaticamente em links). O mecanismo é compartilhado por três fluxos futuros (ativação de conta,
+reset de senha e troca de e-mail), todos apoiados na mesma tabela `user_tokens`:
+
+- **`UserToken`** (domínio) guarda apenas o **hash SHA-256** do código — nunca o valor em claro —
+  junto com tipo (`ACCOUNT_ACTIVATION`, `PASSWORD_RESET`, `EMAIL_CHANGE`), expiração, contagem de
+  tentativas e se já foi usado.
+- **`VerificationCodeIssuer`** (componente compartilhado em `application/service/`) centraliza a
+  emissão: checa o limite diário via Redis, gera o código, persiste o hash e devolve o valor em
+  claro apenas para o chamador enviar por e-mail — evitando duplicar essa lógica entre o registro e
+  o futuro reenvio de código.
+- **`ActivateCustomerUseCase`/`Service`** valida o código submetido contra o token mais recente do
+  tipo `ACCOUNT_ACTIVATION`, aplicando um **máximo de 3 tentativas** antes de exigir um código novo.
+  Ao validar com sucesso, ativa a conta e já emite um access token, evitando um passo extra de login
+  logo após a ativação.
+- **`PrincipalFactory`** centraliza a montagem de `AuthenticatedPrincipal` a partir de `Customer`
+  ou `Staff`, reaproveitada tanto por `AuthenticationService` (login) quanto por
+  `ActivateCustomerService` (ativação), evitando duplicar a lógica de qual authority cada tipo de
+  conta recebe.
+
+Uma pegadinha de `@Transactional` que valeu registrar: por padrão, uma `RuntimeException` não
+tratada reverte toda a transação — inclusive o incremento do contador de tentativas que deveria
+persistir junto com a rejeição de um código inválido. Corrigido com
+`@Transactional(noRollbackFor = InvalidVerificationCodeException.class)`, já que essa exceção
+representa fluxo de negócio esperado, não uma falha técnica que deva desfazer o que já aconteceu.
+
+### Limite de emissão de código (Redis)
+
+Além do limite de tentativas por código (Postgres), existe um **limite de 3 códigos emitidos por
+tipo/usuário a cada 24 horas** (janela móvel, não dia-calendário), implementado em Redis via
+`INCR` + `EXPIRE` atômico — o TTL é definido apenas na primeira ocorrência da chave, para que a
+janela realmente role a cada 24h em vez de ser reiniciada a cada nova tentativa. Essa é,
+deliberadamente, a única responsabilidade do Redis no projeto até agora: dados que precisam de
+transação com outras tabelas (como o próprio `UserToken`) permanecem no Postgres; apenas o contador
+de rate limit — efêmero, sem relação com outras entidades — vive no Redis.
 
 ---
 
 ## 🗄️ Modelagem de Dados (implementada)
 
-O schema inicial (`V1__create_initial_schema.sql`) já está definido e versionado via Flyway,
+O schema inicial (`V1__create_initial_schemas.sql`) já está definido e versionado via Flyway,
 cobrindo o domínio de **Contas de Usuário** (clientes e funcionários) e **Catálogo de Produtos**.
 Decisões relevantes de modelagem:
 
@@ -247,9 +287,9 @@ Decisões relevantes de modelagem:
   `PENDING_DELETION`, `SUSPENDED` e `BANNED`, distinguindo contas aguardando confirmação, deleção
   autossolicitada (com carência de 90 dias) e moderação administrativa, sem ambiguidade entre esses
   fluxos.
-- **Tokens de uso único (`user_tokens`)**: tabela genérica (via `token_type`) para ativação de conta
-  e reset de senha. Guarda apenas o hash SHA-256 do token, com expiração obrigatória e um índice
-  único parcial garantindo, no nível de banco, no máximo um token não utilizado por tipo/usuário.
+- **Tokens de uso único (`user_tokens`)**: tabela genérica (via `token_type`) para ativação de
+  conta, reset de senha e (futuramente) troca de e-mail. Guarda apenas o hash SHA-256 do código,
+  nunca o valor em claro, com expiração obrigatória e contagem de tentativas de verificação.
 - **UUID como chave primária de `users`**: evita enumeração de contas via URL. Entidades de catálogo
   mantêm `BIGINT` sequencial por simplicidade e performance de indexação.
 - **Soft delete e retenção**: usuários e produtos não são removidos fisicamente no fluxo comum — um
@@ -293,8 +333,12 @@ commitadas no repositório. Consulte `.env.example` para a lista completa.
 git clone https://github.com/<seu-usuario>/omnibus-api.git
 cd omnibus-api
 
-# Subir o PostgreSQL local
+# Subir PostgreSQL e Redis local
 docker compose up -d
+
+# Configurar credenciais de e-mail (obrigatório para o fluxo de ativação de conta)
+cp .env.example .env
+# preencher MAIL_USERNAME/MAIL_PASSWORD com uma inbox de teste (ver seção abaixo)
 
 # Rodar o pipeline completo de verificação
 ./mvnw clean verify
@@ -302,6 +346,24 @@ docker compose up -d
 
 O comando `verify` compila o projeto, executa os testes automatizados, aplica as migrations do
 Flyway e valida a formatação e o estilo do código.
+
+### E-mail em desenvolvimento (Mailtrap)
+
+O envio de e-mails (código de ativação de conta, avisos de registro duplicado) usa Spring Mail. Em
+desenvolvimento, recomenda-se o **Mailtrap Email Testing (sandbox)** — os e-mails nunca saem de
+verdade, ficam capturados numa inbox virtual no painel do Mailtrap, permitindo testar com qualquer
+endereço (real ou fictício) sem restrição de destinatário:
+
+```
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=<usuário da sua inbox de teste>
+MAIL_PASSWORD=<senha da sua inbox de teste>
+```
+
+⚠️ Atenção para não confundir com o produto **Email Sending** do Mailtrap (host
+`live.smtp.mailtrap.io`), que envia e-mails reais e restringe o destinatário em contas novas — as
+credenciais precisam ser especificamente da seção *Email Testing* do painel.
 
 ### Executando somente os testes
 
@@ -327,6 +389,16 @@ TablePlus, `psql`):
 - **Banco**: `omnibus`
 - **Usuário**: `postgres`
 - **Senha**: `postgres`
+
+### Inspecionando o Redis localmente
+
+```bash
+docker exec -it omnibus-redis redis-cli
+```
+
+Dentro do prompt, `KEYS *` lista as chaves ativas (ex.: contadores de rate limit de emissão de
+código). Alternativamente, o [RedisInsight](https://redis.io/insight/) oferece uma interface visual,
+conectando em `localhost:6379` sem senha.
 
 ---
 
@@ -412,9 +484,9 @@ banco de dados, reduzindo o tempo de execução e tornando os testes mais determ
 - [x] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs, validação e testes unitários
   para `Customer` — registro (sem enumeração de e-mail) e testes de `RegisterCustomerService`
 - [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT — *em andamento: login,
-  `JwtAuthenticationFilter`, `RoleHierarchy` e testes de `AuthenticationService` prontos; ainda
-  faltam: criação de `Staff` (restrita a `ADMIN`), ativação de conta por código enviado por e-mail e
-  reset de senha via `user_tokens`*
+  `JwtAuthenticationFilter`, `RoleHierarchy`, ativação de conta por código OTP (com rate limit via
+  Redis) e emissão de token pós-ativação prontos e testados; ainda faltam: reenvio de código,
+  criação de `Staff` (restrita a `ADMIN`), reset de senha, troca de e-mail e refresh token*
 - [ ] **Etapa 4** — Carrinho de compras e Pedidos
 - [ ] **Etapa 5** — Wishlist com notificação de reposição de estoque
 

@@ -9,6 +9,4 @@ import java.util.Set;
  * <p>This is intentionally decoupled from Spring Security's {@code UserDetails} so that the
  * domain and application layers never depend on a specific security framework.
  */
-public record AuthenticatedPrincipal(String id, String email, Set<String> authorities) {
-
-}
+public record AuthenticatedPrincipal(String id, String email, Set<String> authorities) {}

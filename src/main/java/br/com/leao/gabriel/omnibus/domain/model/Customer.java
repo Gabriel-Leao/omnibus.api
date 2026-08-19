@@ -100,8 +100,16 @@ public class Customer extends UserAccount {
    */
   public Customer activate() {
     return new Customer(
-        getId(), getName(), getEmail(), getPasswordHash(), UserStatus.ACTIVE,
-        getCreatedAt(), OffsetDateTime.now(), null, birthDate, photoUrl);
+        getId(),
+        getName(),
+        getEmail(),
+        getPasswordHash(),
+        UserStatus.ACTIVE,
+        getCreatedAt(),
+        OffsetDateTime.now(),
+        null,
+        birthDate,
+        photoUrl);
   }
 
   /**

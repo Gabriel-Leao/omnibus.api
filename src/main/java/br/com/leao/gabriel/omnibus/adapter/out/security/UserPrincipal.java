@@ -16,8 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
  */
 public final class UserPrincipal implements UserDetails {
 
-  @Getter
-  private final String id;
+  @Getter private final String id;
   private final String email;
   private final String passwordHash;
   private final UserStatus status;

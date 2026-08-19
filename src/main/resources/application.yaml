@@ -2,6 +2,18 @@ spring:
   application:
     name: omnibus-api
 
+  mail:
+    host: ${MAIL_HOST:sandbox.smtp.mailtrap.io}
+    port: ${MAIL_PORT:2525}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -17,6 +29,9 @@ spring:
 jwt:
   secret: ${JWT_SECRET:change-this-to-a-long-random-secret-in-production-please}
   expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+
+email:
+  sender-address: ${EMAIL_SENDER_ADDRESS}
 
 logging:
   file:

@@ -1,9 +1,11 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.controller;
 
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.ActivateAccountRequest;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.LoginRequest;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.RegisterCustomerRequest;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.RegistrationResponse;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.TokenResponse;
+import br.com.leao.gabriel.omnibus.domain.port.in.ActivateCustomerUseCase;
 import br.com.leao.gabriel.omnibus.domain.port.in.LoginUseCase;
 import br.com.leao.gabriel.omnibus.domain.port.in.RegisterCustomerUseCase;
 import jakarta.validation.Valid;
@@ -25,6 +27,7 @@ public class AuthController {
 
   private final RegisterCustomerUseCase registerCustomerUseCase;
   private final LoginUseCase loginUseCase;
+  private final ActivateCustomerUseCase activateCustomerUseCase;
 
   /**
    * Authenticates a customer or staff member and issues a JWT access token.
@@ -56,5 +59,18 @@ public class AuthController {
         requestData.birthDate(),
         requestData.photoUrl());
     return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationResponse.standard());
+  }
+
+  /**
+   * Activates a customer account using the one-time code sent by email during registration.
+   *
+   * @param request the email and verification code
+   * @return {@code 200 OK} with the issued access token
+   */
+  @PostMapping("/activate")
+  public ResponseEntity<TokenResponse> activate(
+      @Valid @RequestBody ActivateAccountRequest request) {
+    var token = activateCustomerUseCase.execute(request.email(), request.code());
+    return ResponseEntity.ok(new TokenResponse(token));
   }
 }

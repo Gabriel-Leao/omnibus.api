@@ -16,16 +16,21 @@ public interface CustomerPersistenceMapper {
    */
   default CustomerJpaEntity toEntity(Customer customer) {
     CustomerJpaEntity entity = new CustomerJpaEntity();
+
     if (customer.getId() != null) {
       entity.setId(java.util.UUID.fromString(customer.getId()));
     }
+
     entity.setName(customer.getName());
     entity.setEmail(customer.getEmail());
     entity.setPasswordHash(customer.getPasswordHash());
     entity.setStatus(customer.getStatus());
+    entity.setCreatedAt(customer.getCreatedAt());
+    entity.setUpdatedAt(customer.getUpdatedAt());
     entity.setDeletedAt(customer.getDeletedAt());
     entity.setBirthDate(customer.getBirthDate());
     entity.setPhotoUrl(customer.getPhotoUrl());
+
     return entity;
   }
 

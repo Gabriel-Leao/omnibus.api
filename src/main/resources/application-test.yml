@@ -4,3 +4,6 @@ spring:
 
   flyway:
     enabled: true
+
+email:
+  sender-address: test@omnibus.com

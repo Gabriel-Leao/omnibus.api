@@ -3,6 +3,9 @@ package br.com.leao.gabriel.omnibus.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.leao.gabriel.omnibus.domain.exception.InvalidCredentialsException;
@@ -26,9 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Unit tests for {@link AuthenticationService}, covering both customer and staff login paths.
- */
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
 
@@ -39,76 +39,178 @@ class AuthenticationServiceTest {
 
   @Mock
   private CustomerRepositoryPort customerRepository;
+
   @Mock
   private StaffRepositoryPort staffRepository;
+
   @Mock
   private PasswordEncoderPort passwordEncoder;
+
   @Mock
   private TokenIssuerPort tokenIssuer;
+
+  @Mock
+  private PrincipalFactory principalFactory;
+
+  @Mock
+  private AuthenticatedPrincipal principal;
 
   private AuthenticationService service;
 
   @BeforeEach
   void setUp() {
     service =
-        new AuthenticationService(customerRepository, staffRepository, passwordEncoder,
-            tokenIssuer);
+        new AuthenticationService(
+            customerRepository,
+            staffRepository,
+            passwordEncoder,
+            tokenIssuer,
+            principalFactory);
   }
 
   @Test
-  @DisplayName("Should issue a token with ROLE_CUSTOMER for an active customer with valid credentials")
+  @DisplayName("Should authenticate active customer")
   void shouldAuthenticateActiveCustomer() {
     Customer customer = activeCustomer();
+
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
-    when(tokenIssuer.issueAccessToken(any(AuthenticatedPrincipal.class))).thenReturn(ISSUED_TOKEN);
+    when(principalFactory.forCustomer(customer)).thenReturn(principal);
+    when(tokenIssuer.issueAccessToken(principal)).thenReturn(ISSUED_TOKEN);
 
-    String token = service.execute(EMAIL, RAW_PASSWORD);
+    String result = service.execute(EMAIL, RAW_PASSWORD);
 
-    assertThat(token).isEqualTo(ISSUED_TOKEN);
+    assertThat(result).isEqualTo(ISSUED_TOKEN);
+
+    verify(principalFactory).forCustomer(customer);
+    verify(tokenIssuer).issueAccessToken(principal);
+    verifyNoInteractions(staffRepository);
   }
 
   @Test
-  @DisplayName("Should issue a token with the staff's specific role for an active staff member")
-  void shouldAuthenticateActiveStaffWithOwnRole() {
+  @DisplayName("Should authenticate active staff")
+  void shouldAuthenticateActiveStaff() {
     Staff staff = activeStaff(StaffRole.EDITOR);
+
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
     when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.of(staff));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
-    when(tokenIssuer.issueAccessToken(any(AuthenticatedPrincipal.class))).thenReturn(ISSUED_TOKEN);
+    when(principalFactory.forStaff(staff)).thenReturn(principal);
+    when(tokenIssuer.issueAccessToken(principal)).thenReturn(ISSUED_TOKEN);
 
-    String token = service.execute(EMAIL, RAW_PASSWORD);
+    String result = service.execute(EMAIL, RAW_PASSWORD);
 
-    assertThat(token).isEqualTo(ISSUED_TOKEN);
+    assertThat(result).isEqualTo(ISSUED_TOKEN);
+
+    verify(principalFactory).forStaff(staff);
+    verify(tokenIssuer).issueAccessToken(principal);
   }
 
   @Test
-  @DisplayName("Should reject login when the password does not match")
-  void shouldRejectWrongPassword() {
+  @DisplayName("Should reject invalid customer password")
+  void shouldRejectWrongCustomerPassword() {
     Customer customer = activeCustomer();
+
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(false);
 
-    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(
+        InvalidCredentialsException.class,
+        () -> service.execute(EMAIL, RAW_PASSWORD));
+
+    verifyNoInteractions(tokenIssuer, principalFactory);
   }
 
   @Test
-  @DisplayName("Should reject login when the customer account is not yet active")
-  void shouldRejectPendingActivationCustomer() {
+  @DisplayName("Should reject invalid staff password")
+  void shouldRejectWrongStaffPassword() {
+    Staff staff = activeStaff(StaffRole.EDITOR);
+
+    when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+    when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.of(staff));
+    when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(false);
+
+    assertThrows(
+        InvalidCredentialsException.class,
+        () -> service.execute(EMAIL, RAW_PASSWORD));
+
+    verifyNoInteractions(tokenIssuer, principalFactory);
+  }
+
+  @Test
+  @DisplayName("Should reject inactive customer")
+  void shouldRejectInactiveCustomer() {
     Customer customer = customerWithStatus(UserStatus.PENDING_ACTIVATION);
+
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
 
-    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(
+        InvalidCredentialsException.class,
+        () -> service.execute(EMAIL, RAW_PASSWORD));
+
+    verifyNoInteractions(tokenIssuer, principalFactory);
   }
 
   @Test
-  @DisplayName("Should reject login when no account exists for the given email")
+  @DisplayName("Should reject Pending staff")
+  void shouldRejectInactiveStaff() {
+    Staff staff =
+        Staff.reconstruct(
+            "staff-id",
+            "Gabriel Leão",
+            EMAIL,
+            PASSWORD_HASH,
+            UserStatus.PENDING_ACTIVATION,
+            OffsetDateTime.now(),
+            OffsetDateTime.now(),
+            null,
+            StaffRole.EDITOR,
+            "EMP-001",
+            StaffDepartment.IT,
+            LocalDate.now());
+
+    when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+    when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.of(staff));
+    when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
+
+    assertThrows(
+        InvalidCredentialsException.class,
+        () -> service.execute(EMAIL, RAW_PASSWORD));
+
+    verifyNoInteractions(tokenIssuer, principalFactory);
+  }
+
+  @Test
+  @DisplayName("Should reject unknown email")
   void shouldRejectUnknownEmail() {
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
     when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
-    assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
+    assertThrows(
+        InvalidCredentialsException.class,
+        () -> service.execute(EMAIL, RAW_PASSWORD));
+
+    verifyNoInteractions(passwordEncoder, tokenIssuer, principalFactory);
+  }
+
+  @Test
+  @DisplayName("Should authenticate customer before checking staff")
+  void shouldPreferCustomerWhenBothAccountsUseSameEmail() {
+    Customer customer = activeCustomer();
+
+    when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
+    when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
+    when(principalFactory.forCustomer(customer)).thenReturn(principal);
+    when(tokenIssuer.issueAccessToken(principal)).thenReturn(ISSUED_TOKEN);
+
+    String result = service.execute(EMAIL, RAW_PASSWORD);
+
+    assertThat(result).isEqualTo(ISSUED_TOKEN);
+
+    verifyNoInteractions(staffRepository);
+    verify(principalFactory).forCustomer(customer);
+    verify(principalFactory, never()).forStaff(any());
   }
 
   private Customer activeCustomer() {

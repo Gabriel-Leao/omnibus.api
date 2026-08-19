@@ -219,6 +219,18 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- Redis -->
+    <dependency>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+    <!-- Spring Mail -->
+    <dependency>
+      <artifactId>spring-boot-starter-mail</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
     <!-- SpringDoc -->
     <dependency>
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -259,7 +271,7 @@
       <scope>runtime</scope>
       <version>0.13.0</version>
     </dependency>
-    
+
     <!-- ===================================================== -->
     <!-- TESTES                                                -->
     <!-- ===================================================== -->

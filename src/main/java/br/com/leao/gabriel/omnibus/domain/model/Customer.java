@@ -96,6 +96,15 @@ public class Customer extends UserAccount {
   }
 
   /**
+   * Returns a copy of this customer transitioned to {@link UserStatus#ACTIVE}.
+   */
+  public Customer activate() {
+    return new Customer(
+        getId(), getName(), getEmail(), getPasswordHash(), UserStatus.ACTIVE,
+        getCreatedAt(), OffsetDateTime.now(), null, birthDate, photoUrl);
+  }
+
+  /**
    * Creates a customer instance marked as pending deletion.
    */
   public Customer requestDeletion() {

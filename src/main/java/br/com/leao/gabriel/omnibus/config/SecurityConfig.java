@@ -38,11 +38,26 @@ public class SecurityConfig {
         .build();
   }
 
+  /**
+   * Provides the BCrypt password encoder used across the application.
+   */
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
 
+  /**
+   * Configures the application's HTTP security filter chain.
+   *
+   * <p>The application is stateless and uses JWT authentication. Authentication endpoints under
+   * {@code /auth/**} are publicly accessible, while the JWT filter handles authentication for
+   * protected endpoints.
+   *
+   * @param http                    the HTTP security configuration
+   * @param jwtAuthenticationFilter the filter responsible for JWT authentication
+   * @return the configured security filter chain
+   * @throws Exception if the security configuration cannot be built
+   */
   @Bean
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {

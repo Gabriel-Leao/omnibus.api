@@ -3,7 +3,8 @@ package br.com.leao.gabriel.omnibus.adapter.out.persistence;
 import br.com.leao.gabriel.omnibus.adapter.out.mapper.UserTokenPersistenceMapper;
 import br.com.leao.gabriel.omnibus.adapter.out.persistence.entity.UserTokenJpaEntity;
 import br.com.leao.gabriel.omnibus.adapter.out.persistence.repository.UserTokenJpaRepository;
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
+import br.com.leao.gabriel.omnibus.domain.model.TokenStatus;
 import br.com.leao.gabriel.omnibus.domain.model.UserToken;
 import br.com.leao.gabriel.omnibus.domain.port.out.UserTokenRepositoryPort;
 import java.util.Optional;
@@ -29,14 +30,32 @@ public class UserTokenPersistenceAdapter implements UserTokenRepositoryPort {
   }
 
   @Override
-  public Optional<UserToken> findLatestByUserIdAndType(String userId, TokenType type) {
+  public Optional<UserToken> findLatestByUserIdAndType(String userId, OtpType type) {
     return jpaRepository
-        .findFirstByUserIdAndTokenTypeOrderByCreatedAtDesc(UUID.fromString(userId), type)
+        .findFirstByUserIdAndOtpTypeOrderByCreatedAtDesc(UUID.fromString(userId), type)
         .map(mapper::toDomain);
   }
 
   @Override
   public void deleteById(Long id) {
     jpaRepository.deleteById(id);
+  }
+
+  @Override
+  public void flush() {
+    jpaRepository.flush();
+  }
+
+  /**
+   * Finds the currently active token for the specified user, locking the row so concurrent issuance
+   * requests for the same user serialize instead of racing.
+   *
+   * @param userId the user's identifier
+   */
+  @Override
+  public Optional<UserToken> findActiveByUserId(String userId) {
+    return jpaRepository
+        .findByUserIdAndTokenStatusForUpdate(UUID.fromString(userId), TokenStatus.ACTIVE)
+        .map(mapper::toDomain);
   }
 }

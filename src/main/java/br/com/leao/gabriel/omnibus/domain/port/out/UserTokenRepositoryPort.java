@@ -1,6 +1,6 @@
 package br.com.leao.gabriel.omnibus.domain.port.out;
 
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.model.UserToken;
 import java.util.Optional;
 
@@ -14,7 +14,11 @@ public interface UserTokenRepositoryPort {
   /**
    * Finds the most recent token for the given user and type, regardless of state.
    */
-  Optional<UserToken> findLatestByUserIdAndType(String userId, TokenType type);
+  Optional<UserToken> findLatestByUserIdAndType(String userId, OtpType type);
 
   void deleteById(Long id);
+
+  void flush();
+
+  Optional<UserToken> findActiveByUserId(String userId);
 }

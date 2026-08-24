@@ -1,4 +1,4 @@
-package br.com.leao.gabriel.omnibus.domain.port.in;
+package br.com.leao.gabriel.omnibus.application.usecase;
 
 /**
  * Use case for authenticating a user with email and password credentials.

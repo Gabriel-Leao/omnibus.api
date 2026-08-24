@@ -1,13 +1,16 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.controller;
 
-import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.ActivateAccountRequest;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.LoginRequest;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.RegisterCustomerRequest;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.ResendActivationCodeRequest;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.VerifyCodeRequest;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.AccessTokenResponse;
 import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.RegistrationResponse;
-import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.TokenResponse;
-import br.com.leao.gabriel.omnibus.domain.port.in.ActivateCustomerUseCase;
-import br.com.leao.gabriel.omnibus.domain.port.in.LoginUseCase;
-import br.com.leao.gabriel.omnibus.domain.port.in.RegisterCustomerUseCase;
+import br.com.leao.gabriel.omnibus.application.usecase.ActivateAccountUseCase;
+import br.com.leao.gabriel.omnibus.application.usecase.LoginUseCase;
+import br.com.leao.gabriel.omnibus.application.usecase.RegisterCustomerUseCase;
+import br.com.leao.gabriel.omnibus.application.usecase.SendOtpUseCase;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,7 +30,8 @@ public class AuthController {
 
   private final RegisterCustomerUseCase registerCustomerUseCase;
   private final LoginUseCase loginUseCase;
-  private final ActivateCustomerUseCase activateCustomerUseCase;
+  private final ActivateAccountUseCase activateAccountUseCase;
+  private final SendOtpUseCase sendOtpUseCase;
 
   /**
    * Authenticates a customer or staff member and issues a JWT access token.
@@ -36,9 +40,9 @@ public class AuthController {
    * @return {@code 200 OK} with the issued access token
    */
   @PostMapping("/login")
-  public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-    String token = loginUseCase.execute(request.email(), request.password());
-    return ResponseEntity.ok(new TokenResponse(token));
+  public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody LoginRequest request) {
+    String accessToken = loginUseCase.execute(request.email(), request.password());
+    return ResponseEntity.ok(new AccessTokenResponse(accessToken));
   }
 
   /**
@@ -68,9 +72,27 @@ public class AuthController {
    * @return {@code 200 OK} with the issued access token
    */
   @PostMapping("/activate")
-  public ResponseEntity<TokenResponse> activate(
-      @Valid @RequestBody ActivateAccountRequest request) {
-    var token = activateCustomerUseCase.execute(request.email(), request.code());
-    return ResponseEntity.ok(new TokenResponse(token));
+  public ResponseEntity<AccessTokenResponse> activate(
+      @Valid @RequestBody VerifyCodeRequest request) {
+    var accessToken = activateAccountUseCase.execute(request.email(), request.code());
+    return ResponseEntity.ok(new AccessTokenResponse(accessToken));
+  }
+
+  /**
+   * Resends the account activation code to the requested email address.
+   *
+   * <p>The response is intentionally identical whether or not the email address is associated with
+   * a customer, to prevent user enumeration; the actual outcome is communicated exclusively by
+   * email.
+   *
+   * @param request the email address for which the activation code should be resent, already ```
+   *                validated by Bean Validation ```
+   * @return {@code 202 Accepted} with a generic confirmation message
+   */
+  @PostMapping("/resend-activation")
+  public ResponseEntity<RegistrationResponse> resend(
+      @Valid @RequestBody ResendActivationCodeRequest request) {
+    sendOtpUseCase.execute(request.email(), OtpType.ACCOUNT_ACTIVATION);
+    return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationResponse.standard());
   }
 }

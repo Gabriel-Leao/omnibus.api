@@ -123,7 +123,11 @@ explícita de onde morar:
 | `JwtAuthenticationFilter` | Intercepta a requisição HTTP e extrai o token | `adapter/in/web/security/` | Reage a uma requisição chegando — é entrada.                                                       |
 | `SecurityConfig`          | Configuração do `SecurityFilterChain`         | `config/`                  | Fiação de infraestrutura pura; forçar isso em porta/adapter gera mais confusão que clareza.        |
 
-> ⚠️ **Nota temporária**: `/auth/**` já é validada por JWT via `JwtAuthenticationFilter`, e
+> ⚠️ **Nota temporária**: `/auth/**` e `/password-reset` / `/password-reset/verify` continuam
+> liberados (`permitAll`), já que fazem parte do próprio fluxo de autenticação. A exceção é
+> `/password-reset/confirm`, que exige `hasAuthority("PASSWORD_RESET")` — só aceito quando o JWT
+> apresentado é, especificamente, o token de curta duração emitido por
+> `TokenIssuerPort.issuePasswordResetToken` após a verificação do código, não um access token comum.
 > `@PreAuthorize` (com `RoleHierarchy`: `ADMIN` ⊃ `EDITOR` ⊃ `MANAGER` ⊃ `VIEWER`) já está
 > disponível
 > para uso em métodos de service/controller. As demais rotas continuam liberadas
@@ -196,7 +200,10 @@ domínio/validação em respostas HTTP padronizadas, incluindo um `traceId` gera
 `MDC`) para correlacionar logs e respostas de erro. As exceções de domínio seguem uma hierarquia por
 categoria (`NotFoundException`, `ConflictException`, `ForbiddenException`,
 `BusinessRuleViolationException`), de forma que novas exceções específicas (em produtos, pedidos,
-etc.) nunca exigem alterar o handler central — basta estender a categoria correta.
+etc.) nunca exigem alterar o handler central — basta estender a categoria correta. Há também um
+handler dedicado para `DataIntegrityViolationException`, convertido em `409 Conflict` genérico: uma
+rede de segurança para violações de constraint que escapem das validações de aplicação (como duas
+emissões de OTP concorrentes disputando o índice único de token ativo).
 
 ---
 
@@ -220,45 +227,67 @@ Login e emissão de token seguem a mesma separação de portas/adapters do resta
 
 ### Prevenção de enumeração de usuários (User Enumeration)
 
-`POST /auth/register` devolve **sempre a mesma resposta** (`202 Accepted` com uma mensagem
-genérica), independentemente de o e-mail já estar cadastrado ou não — o resultado real (código de
-ativação ou aviso de tentativa de registro duplicado) é comunicado exclusivamente por e-mail, nunca
-pela resposta HTTP. Da mesma forma, `POST /auth/login` nunca distingue "e-mail não encontrado" de
-"senha incorreta", sempre respondendo com o mesmo erro genérico. Isso evita que um atacante use
-essas respostas para descobrir quais e-mails possuem conta na plataforma — uma vulnerabilidade real
-e catalogada (CWE-203 / OWASP API Security).
+`POST /auth/register`, `POST /auth/resend-activation` e `POST /password-reset` devolvem **sempre a
+mesma resposta** (`202 Accepted` com uma mensagem genérica), independentemente de o e-mail já estar
+cadastrado, já estar ativado, ou nem existir — o resultado real (código enviado, aviso de registro
+duplicado, ou nenhuma ação) é comunicado exclusivamente por e-mail, nunca pela resposta HTTP. Da
+mesma forma, `POST /auth/login` nunca distingue "e-mail não encontrado" de "senha incorreta", e a
+verificação de código (`POST /auth/activate`, `POST /password-reset/verify`) nunca distingue
+"e-mail desconhecido" de "código errado" — sempre respondendo com o mesmo erro genérico. Isso evita
+que um atacante use essas respostas para descobrir quais e-mails possuem conta na plataforma — uma
+vulnerabilidade real e catalogada (CWE-203 / OWASP API Security).
 
-Como consequência dessa decisão, `RegisterCustomerUseCase.execute()` não retorna o `Customer`
-criado nem um token — o resultado real chega apenas por e-mail.
+Como consequência dessa decisão, `RegisterCustomerUseCase.execute()` e `SendOtpUseCase.execute()`
+não retornam o `Customer` nem revelam se algo foi de fato enviado — o resultado real chega apenas
+por e-mail.
 
-### Ativação de conta por código (OTP)
+### Verificação por código (OTP): ativação de conta e reset de senha
 
-Em vez de um link de ativação, a conta é confirmada por um **código numérico de 6 dígitos**
-(mais amigável em mobile, evita problemas com scanners de e-mail corporativos "clicando"
-automaticamente em links). O mecanismo é compartilhado por três fluxos futuros (ativação de conta,
-reset de senha e troca de e-mail), todos apoiados na mesma tabela `user_tokens`:
+Em vez de um link de ativação, a conta é confirmada (e a senha redefinida) por um **código numérico
+de 6 dígitos** (mais amigável em mobile, evita problemas com scanners de e-mail corporativos
+"clicando" automaticamente em links). O mecanismo é compartilhado entre os fluxos de ativação de
+conta, reset de senha e (futuramente) troca de e-mail, todos apoiados na mesma tabela `user_tokens`:
 
 - **`UserToken`** (domínio) guarda apenas o **hash SHA-256** do código — nunca o valor em claro —
   junto com tipo (`ACCOUNT_ACTIVATION`, `PASSWORD_RESET`, `EMAIL_CHANGE`), expiração, contagem de
   tentativas e se já foi usado.
-- **`VerificationCodeIssuer`** (componente compartilhado em `application/service/`) centraliza a
-  emissão: checa o limite diário via Redis, gera o código, persiste o hash e devolve o valor em
-  claro apenas para o chamador enviar por e-mail — evitando duplicar essa lógica entre o registro e
-  o futuro reenvio de código.
-- **`ActivateCustomerUseCase`/`Service`** valida o código submetido contra o token mais recente do
-  tipo `ACCOUNT_ACTIVATION`, aplicando um **máximo de 3 tentativas** antes de exigir um código novo.
-  Ao validar com sucesso, ativa a conta e já emite um access token, evitando um passo extra de login
-  logo após a ativação.
-- **`PrincipalFactory`** centraliza a montagem de `AuthenticatedPrincipal` a partir de `Customer`
-  ou `Staff`, reaproveitada tanto por `AuthenticationService` (login) quanto por
-  `ActivateCustomerService` (ativação), evitando duplicar a lógica de qual authority cada tipo de
+- **`VerificationOtpIssuer`** (componente compartilhado em `application/service/`) centraliza a
+  emissão: checa o limite diário via Redis, revoga qualquer token ainda ativo do usuário (via um
+  `SELECT ... FOR UPDATE` para serializar emissões concorrentes em vez de disputar o índice único
+  `ux_user_token_one_active`), gera o novo código, persiste o hash e devolve o valor em claro apenas
+  para o chamador enviar por e-mail.
+- **`OtpVerifier`** (componente compartilhado) contém a lógica de verificação usada tanto na
+  ativação quanto no reset de senha: valida o código submetido contra o token mais recente do tipo
+  informado, aplicando um **máximo de 3 tentativas** antes de exigir um código novo, sem revelar
+  qual condição específica falhou (e-mail desconhecido, código errado, código expirado).
+- **`ActivateAccountService`** usa o `OtpVerifier` com `OtpType.ACCOUNT_ACTIVATION`; ao validar com
+  sucesso, ativa a conta e já emite um access token, evitando um passo extra de login logo após a
+  ativação.
+- **`VerifyPasswordResetService`** usa o mesmo `OtpVerifier` com `OtpType.PASSWORD_RESET`; ao
+  validar com sucesso, emite um **token de curta duração com escopo restrito** (authority
+  `PASSWORD_RESET`, não um access token normal) através de
+  `TokenIssuerPort.issuePasswordResetToken`. Esse token só autoriza `POST /password-reset/confirm` —
+  o `JwtAuthenticationFilter` confere que a claim `purpose` do token bate com `PASSWORD_RESET` antes
+  de aceitar essa authority, e o
+  `SecurityConfig` exige `hasAuthority("PASSWORD_RESET")` especificamente nessa rota.
+- **`ResetPasswordService`** troca a senha do `Customer` autenticado pelo token de reset,
+  reencodando com o `PasswordEncoder` configurado.
+- **`SendOtpService`** unifica o (re)envio de código para os três tipos de OTP: verifica se o
+  cliente existe e está no estado certo para o tipo solicitado (`Customer.canUseOtp`/`isEligible`),
+  respeita o **cooldown de 60 segundos** entre emissões (`UserToken.isResendAllowed`), delega a
+  emissão ao `VerificationOtpIssuer` e o envio ao `OtpSenderPort`. É o service por trás de
+  `POST /auth/resend-activation` e `POST /password-reset`.
+- **`AuthenticatedPrincipalFactory`** centraliza a montagem de `AuthenticatedPrincipal` a partir de
+  `Customer` ou `Staff`, reaproveitada tanto por `AuthenticationService` (login) quanto por
+  `ActivateAccountService` (ativação), evitando duplicar a lógica de qual authority cada tipo de
   conta recebe.
 
 Uma pegadinha de `@Transactional` que valeu registrar: por padrão, uma `RuntimeException` não
 tratada reverte toda a transação — inclusive o incremento do contador de tentativas que deveria
 persistir junto com a rejeição de um código inválido. Corrigido com
-`@Transactional(noRollbackFor = InvalidVerificationCodeException.class)`, já que essa exceção
-representa fluxo de negócio esperado, não uma falha técnica que deva desfazer o que já aconteceu.
+`@Transactional(noRollbackFor = InvalidVerificationCodeException.class)` em `ActivateAccountService`
+e `VerifyPasswordResetService`, já que essa exceção representa fluxo de negócio esperado, não uma
+falha técnica que deva desfazer o que já aconteceu.
 
 ### Limite de emissão de código (Redis)
 
@@ -289,7 +318,11 @@ Decisões relevantes de modelagem:
   fluxos.
 - **Tokens de uso único (`user_tokens`)**: tabela genérica (via `token_type`) para ativação de
   conta, reset de senha e (futuramente) troca de e-mail. Guarda apenas o hash SHA-256 do código,
-  nunca o valor em claro, com expiração obrigatória e contagem de tentativas de verificação.
+  nunca o valor em claro, com expiração obrigatória e contagem de tentativas de verificação. Um
+  índice único parcial (`ux_user_token_one_active`, `WHERE token_status = 'ACTIVE'`) garante no
+  próprio banco que um usuário nunca tenha mais de um token ativo simultaneamente — a aplicação
+  também serializa emissões concorrentes via lock pessimista, mas a constraint é a última linha de
+  defesa.
 - **UUID como chave primária de `users`**: evita enumeração de contas via URL. Entidades de catálogo
   mantêm `BIGINT` sequencial por simplicidade e performance de indexação.
 - **Soft delete e retenção**: usuários e produtos não são removidos fisicamente no fluxo comum — um
@@ -485,8 +518,9 @@ banco de dados, reduzindo o tempo de execução e tornando os testes mais determ
   para `Customer` — registro (sem enumeração de e-mail) e testes de `RegisterCustomerService`
 - [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT — *em andamento: login,
   `JwtAuthenticationFilter`, `RoleHierarchy`, ativação de conta por código OTP (com rate limit via
-  Redis) e emissão de token pós-ativação prontos e testados; ainda faltam: reenvio de código,
-  criação de `Staff` (restrita a `ADMIN`), reset de senha, troca de e-mail e refresh token*
+  Redis), reenvio de código com cooldown, reset de senha completo (solicitar código, verificar,
+  confirmar nova senha com token de escopo restrito) e emissão de token pós-ativação prontos e
+  testados; ainda faltam: criação de `Staff` (restrita a `ADMIN`), troca de e-mail e refresh token*
 - [ ] **Etapa 4** — Carrinho de compras e Pedidos
 - [ ] **Etapa 5** — Wishlist com notificação de reposição de estoque
 

@@ -1,4 +1,4 @@
-package br.com.leao.gabriel.omnibus.domain.port.in;
+package br.com.leao.gabriel.omnibus.application.usecase;
 
 import java.time.LocalDate;
 

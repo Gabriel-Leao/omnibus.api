@@ -19,12 +19,14 @@ public interface UserTokenPersistenceMapper {
         .id(token.getId())
         .userId(UUID.fromString(token.getUserId()))
         .tokenHash(token.getCodeHash())
-        .tokenType(token.getType())
+        .otpType(token.getType())
         .targetEmail(token.getTargetEmail())
         .attempts(token.getAttempts())
+        .tokenStatus(token.getTokenStatus())
         .expiresAt(token.getExpiresAt())
         .createdAt(token.getCreatedAt())
         .usedAt(token.getUsedAt())
+        .revokedAt(token.getRevokedAt())
         .build();
   }
 
@@ -36,11 +38,13 @@ public interface UserTokenPersistenceMapper {
         entity.getId(),
         entity.getUserId().toString(),
         entity.getTokenHash(),
-        entity.getTokenType(),
+        entity.getOtpType(),
         entity.getTargetEmail(),
         entity.getAttempts(),
+        entity.getTokenStatus(),
         entity.getExpiresAt(),
         entity.getCreatedAt(),
-        entity.getUsedAt());
+        entity.getUsedAt(),
+        entity.getRevokedAt());
   }
 }

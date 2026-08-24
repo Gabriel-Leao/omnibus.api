@@ -1,10 +1,11 @@
 package br.com.leao.gabriel.omnibus.application.service;
 
+import br.com.leao.gabriel.omnibus.application.factory.AuthenticatedPrincipalFactory;
+import br.com.leao.gabriel.omnibus.application.usecase.LoginUseCase;
 import br.com.leao.gabriel.omnibus.domain.exception.InvalidCredentialsException;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.model.Staff;
 import br.com.leao.gabriel.omnibus.domain.model.UserStatus;
-import br.com.leao.gabriel.omnibus.domain.port.in.LoginUseCase;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.StaffRepositoryPort;
@@ -27,7 +28,7 @@ public class AuthenticationService implements LoginUseCase {
   private final StaffRepositoryPort staffRepository;
   private final PasswordEncoderPort passwordEncoder;
   private final TokenIssuerPort tokenIssuer;
-  private final PrincipalFactory principalFactory;
+  private final AuthenticatedPrincipalFactory authenticatedPrincipalFactory;
 
   @Override
   public String execute(String email, String rawPassword) {
@@ -46,12 +47,12 @@ public class AuthenticationService implements LoginUseCase {
 
   private String authenticateCustomer(Customer customer, String rawPassword) {
     validateCredentials(rawPassword, customer.getPasswordHash(), customer.getStatus());
-    return tokenIssuer.issueAccessToken(principalFactory.forCustomer(customer));
+    return tokenIssuer.issueAccessToken(authenticatedPrincipalFactory.forCustomer(customer));
   }
 
   private String authenticateStaff(Staff staff, String rawPassword) {
     validateCredentials(rawPassword, staff.getPasswordHash(), staff.getStatus());
-    return tokenIssuer.issueAccessToken(principalFactory.forStaff(staff));
+    return tokenIssuer.issueAccessToken(authenticatedPrincipalFactory.forStaff(staff));
   }
 
   private void validateCredentials(String rawPassword, String passwordHash, UserStatus status) {

@@ -1,7 +1,7 @@
 package br.com.leao.gabriel.omnibus.adapter.out;
 
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
-import br.com.leao.gabriel.omnibus.domain.port.out.TokenIssuanceRateLimiterPort;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
+import br.com.leao.gabriel.omnibus.domain.port.out.OtpIssuanceRateLimiterPort;
 import java.time.Duration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  * expiration to implement a 24-hour sliding-window rate limit without a cleanup job.
  */
 @Component
-public class RedisTokenIssuanceRateLimiterAdapter implements TokenIssuanceRateLimiterPort {
+public class RedisOtpIssuanceRateLimiterAdapter implements OtpIssuanceRateLimiterPort {
 
   private static final Duration WINDOW = Duration.ofHours(24);
 
@@ -20,12 +20,12 @@ public class RedisTokenIssuanceRateLimiterAdapter implements TokenIssuanceRateLi
   /**
    * Creates the adapter with the Redis template used to store issuance counters.
    */
-  public RedisTokenIssuanceRateLimiterAdapter(StringRedisTemplate redisTemplate) {
+  public RedisOtpIssuanceRateLimiterAdapter(StringRedisTemplate redisTemplate) {
     this.redisTemplate = redisTemplate;
   }
 
   @Override
-  public long incrementAndGet(String userId, TokenType type) {
+  public long incrementAndGet(String userId, OtpType type) {
     String key = "otp-rate-limit:%s:%s".formatted(userId, type.name());
     Long count = redisTemplate.opsForValue().increment(key);
     if (count != null && count == 1L) {

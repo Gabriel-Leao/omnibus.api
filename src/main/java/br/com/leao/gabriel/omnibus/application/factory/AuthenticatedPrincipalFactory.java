@@ -1,4 +1,4 @@
-package br.com.leao.gabriel.omnibus.application.service;
+package br.com.leao.gabriel.omnibus.application.factory;
 
 import br.com.leao.gabriel.omnibus.domain.model.AuthenticatedPrincipal;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * tokens (login, account activation, etc.).
  */
 @Component
-public class PrincipalFactory {
+public class AuthenticatedPrincipalFactory {
 
   /**
    * Builds the principal representing an authenticated {@link Customer}.

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import br.com.leao.gabriel.omnibus.application.factory.AuthenticatedPrincipalFactory;
 import br.com.leao.gabriel.omnibus.domain.exception.InvalidCredentialsException;
 import br.com.leao.gabriel.omnibus.domain.model.AuthenticatedPrincipal;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
@@ -20,7 +21,7 @@ import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.StaffRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.TokenIssuerPort;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,17 +38,23 @@ class AuthenticationServiceTest {
   private static final String PASSWORD_HASH = "hashed-password";
   private static final String ISSUED_TOKEN = "signed.jwt.token";
 
-  @Mock private CustomerRepositoryPort customerRepository;
+  @Mock
+  private CustomerRepositoryPort customerRepository;
 
-  @Mock private StaffRepositoryPort staffRepository;
+  @Mock
+  private StaffRepositoryPort staffRepository;
 
-  @Mock private PasswordEncoderPort passwordEncoder;
+  @Mock
+  private PasswordEncoderPort passwordEncoder;
 
-  @Mock private TokenIssuerPort tokenIssuer;
+  @Mock
+  private TokenIssuerPort tokenIssuer;
 
-  @Mock private PrincipalFactory principalFactory;
+  @Mock
+  private AuthenticatedPrincipalFactory authenticatedPrincipalFactory;
 
-  @Mock private AuthenticatedPrincipal principal;
+  @Mock
+  private AuthenticatedPrincipal principal;
 
   private AuthenticationService service;
 
@@ -55,7 +62,8 @@ class AuthenticationServiceTest {
   void setUp() {
     service =
         new AuthenticationService(
-            customerRepository, staffRepository, passwordEncoder, tokenIssuer, principalFactory);
+            customerRepository, staffRepository, passwordEncoder, tokenIssuer,
+            authenticatedPrincipalFactory);
   }
 
   @Test
@@ -65,14 +73,14 @@ class AuthenticationServiceTest {
 
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
-    when(principalFactory.forCustomer(customer)).thenReturn(principal);
+    when(authenticatedPrincipalFactory.forCustomer(customer)).thenReturn(principal);
     when(tokenIssuer.issueAccessToken(principal)).thenReturn(ISSUED_TOKEN);
 
     String result = service.execute(EMAIL, RAW_PASSWORD);
 
     assertThat(result).isEqualTo(ISSUED_TOKEN);
 
-    verify(principalFactory).forCustomer(customer);
+    verify(authenticatedPrincipalFactory).forCustomer(customer);
     verify(tokenIssuer).issueAccessToken(principal);
     verifyNoInteractions(staffRepository);
   }
@@ -85,14 +93,14 @@ class AuthenticationServiceTest {
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
     when(staffRepository.findByEmail(EMAIL)).thenReturn(Optional.of(staff));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
-    when(principalFactory.forStaff(staff)).thenReturn(principal);
+    when(authenticatedPrincipalFactory.forStaff(staff)).thenReturn(principal);
     when(tokenIssuer.issueAccessToken(principal)).thenReturn(ISSUED_TOKEN);
 
     String result = service.execute(EMAIL, RAW_PASSWORD);
 
     assertThat(result).isEqualTo(ISSUED_TOKEN);
 
-    verify(principalFactory).forStaff(staff);
+    verify(authenticatedPrincipalFactory).forStaff(staff);
     verify(tokenIssuer).issueAccessToken(principal);
   }
 
@@ -106,7 +114,7 @@ class AuthenticationServiceTest {
 
     assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
-    verifyNoInteractions(tokenIssuer, principalFactory);
+    verifyNoInteractions(tokenIssuer, authenticatedPrincipalFactory);
   }
 
   @Test
@@ -120,7 +128,7 @@ class AuthenticationServiceTest {
 
     assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
-    verifyNoInteractions(tokenIssuer, principalFactory);
+    verifyNoInteractions(tokenIssuer, authenticatedPrincipalFactory);
   }
 
   @Test
@@ -133,7 +141,7 @@ class AuthenticationServiceTest {
 
     assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
-    verifyNoInteractions(tokenIssuer, principalFactory);
+    verifyNoInteractions(tokenIssuer, authenticatedPrincipalFactory);
   }
 
   @Test
@@ -146,8 +154,8 @@ class AuthenticationServiceTest {
             EMAIL,
             PASSWORD_HASH,
             UserStatus.PENDING_ACTIVATION,
-            OffsetDateTime.now(),
-            OffsetDateTime.now(),
+            Instant.now(),
+            Instant.now(),
             null,
             StaffRole.EDITOR,
             "EMP-001",
@@ -160,7 +168,7 @@ class AuthenticationServiceTest {
 
     assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
-    verifyNoInteractions(tokenIssuer, principalFactory);
+    verifyNoInteractions(tokenIssuer, authenticatedPrincipalFactory);
   }
 
   @Test
@@ -171,7 +179,7 @@ class AuthenticationServiceTest {
 
     assertThrows(InvalidCredentialsException.class, () -> service.execute(EMAIL, RAW_PASSWORD));
 
-    verifyNoInteractions(passwordEncoder, tokenIssuer, principalFactory);
+    verifyNoInteractions(passwordEncoder, tokenIssuer, authenticatedPrincipalFactory);
   }
 
   @Test
@@ -181,7 +189,7 @@ class AuthenticationServiceTest {
 
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
     when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);
-    when(principalFactory.forCustomer(customer)).thenReturn(principal);
+    when(authenticatedPrincipalFactory.forCustomer(customer)).thenReturn(principal);
     when(tokenIssuer.issueAccessToken(principal)).thenReturn(ISSUED_TOKEN);
 
     String result = service.execute(EMAIL, RAW_PASSWORD);
@@ -189,8 +197,8 @@ class AuthenticationServiceTest {
     assertThat(result).isEqualTo(ISSUED_TOKEN);
 
     verifyNoInteractions(staffRepository);
-    verify(principalFactory).forCustomer(customer);
-    verify(principalFactory, never()).forStaff(any());
+    verify(authenticatedPrincipalFactory).forCustomer(customer);
+    verify(authenticatedPrincipalFactory, never()).forStaff(any());
   }
 
   private Customer activeCustomer() {
@@ -204,8 +212,8 @@ class AuthenticationServiceTest {
         EMAIL,
         PASSWORD_HASH,
         status,
-        OffsetDateTime.now(),
-        OffsetDateTime.now(),
+        Instant.now(),
+        Instant.now(),
         null,
         LocalDate.of(2000, 1, 1),
         null);
@@ -218,8 +226,8 @@ class AuthenticationServiceTest {
         EMAIL,
         PASSWORD_HASH,
         UserStatus.ACTIVE,
-        OffsetDateTime.now(),
-        OffsetDateTime.now(),
+        Instant.now(),
+        Instant.now(),
         null,
         role,
         "EMP-001",

@@ -17,4 +17,12 @@ public interface TokenIssuerPort {
    * @return a signed, time-bound access token
    */
   String issueAccessToken(AuthenticatedPrincipal principal);
+
+  /**
+   * Issues a short-lived token authorising a password reset for the given user.
+   *
+   * @param userId the ID of the user authorised to reset their password
+   * @return a signed, time-bound password reset token
+   */
+  String issuePasswordResetToken(String userId);
 }

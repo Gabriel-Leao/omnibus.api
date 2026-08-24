@@ -1,7 +1,7 @@
 package br.com.leao.gabriel.omnibus.domain.model;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.Objects;
 import lombok.Getter;
 
@@ -22,9 +22,9 @@ public class Staff extends UserAccount {
       String email,
       String passwordHash,
       UserStatus status,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt,
-      OffsetDateTime deletedAt,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant deletedAt,
       StaffRole role,
       String employeeCode,
       StaffDepartment department,
@@ -71,9 +71,9 @@ public class Staff extends UserAccount {
       String email,
       String passwordHash,
       UserStatus status,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt,
-      OffsetDateTime deletedAt,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant deletedAt,
       StaffRole role,
       String employeeCode,
       StaffDepartment department,

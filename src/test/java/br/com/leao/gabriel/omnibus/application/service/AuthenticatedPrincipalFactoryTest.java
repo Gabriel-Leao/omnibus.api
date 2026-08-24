@@ -3,6 +3,7 @@ package br.com.leao.gabriel.omnibus.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import br.com.leao.gabriel.omnibus.application.factory.AuthenticatedPrincipalFactory;
 import br.com.leao.gabriel.omnibus.domain.model.AuthenticatedPrincipal;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.model.Staff;
@@ -14,16 +15,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class PrincipalFactoryTest {
+class AuthenticatedPrincipalFactoryTest {
 
   private static final String ID = "user-id";
   private static final String EMAIL = "gabriel@teste.com";
 
-  private final PrincipalFactory factory = new PrincipalFactory();
+  private final AuthenticatedPrincipalFactory factory = new AuthenticatedPrincipalFactory();
 
-  @Mock private Customer customer;
+  @Mock
+  private Customer customer;
 
-  @Mock private Staff staff;
+  @Mock
+  private Staff staff;
 
   @Test
   @DisplayName("Should create customer principal with ROLE_CUSTOMER")

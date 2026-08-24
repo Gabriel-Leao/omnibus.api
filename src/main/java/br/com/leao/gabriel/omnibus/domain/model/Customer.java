@@ -1,7 +1,7 @@
 package br.com.leao.gabriel.omnibus.domain.model;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.Objects;
 import lombok.Getter;
 
@@ -20,9 +20,9 @@ public class Customer extends UserAccount {
       String email,
       String passwordHash,
       UserStatus status,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt,
-      OffsetDateTime deletedAt,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant deletedAt,
       LocalDate birthDate,
       String photoUrl) {
     super(
@@ -66,9 +66,9 @@ public class Customer extends UserAccount {
       String email,
       String passwordHash,
       UserStatus status,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt,
-      OffsetDateTime deletedAt,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant deletedAt,
       LocalDate birthDate,
       String photoUrl) {
     Objects.requireNonNull(id, "Id must not be null when reconstructing a persisted customer");
@@ -95,6 +95,30 @@ public class Customer extends UserAccount {
     return birthDate;
   }
 
+  public boolean canUseOtp(OtpType otpType) {
+    return switch (otpType) {
+      case ACCOUNT_ACTIVATION -> !isActivated();
+      case PASSWORD_RESET, EMAIL_CHANGE -> isActivated();
+    };
+  }
+
+  public Customer changePassword(String passwordHash) {
+    Objects.requireNonNull(passwordHash, "Password hash must not be null");
+
+    return new Customer(
+        getId(),
+        getName(),
+        getEmail(),
+        passwordHash,
+        getStatus(),
+        getCreatedAt(),
+        getUpdatedAt(),
+        getDeletedAt(),
+        birthDate,
+        photoUrl
+    );
+  }
+
   /**
    * Returns a copy of this customer transitioned to {@link UserStatus#ACTIVE}.
    */
@@ -106,7 +130,7 @@ public class Customer extends UserAccount {
         getPasswordHash(),
         UserStatus.ACTIVE,
         getCreatedAt(),
-        OffsetDateTime.now(),
+        Instant.now(),
         null,
         birthDate,
         photoUrl);
@@ -123,9 +147,13 @@ public class Customer extends UserAccount {
         getPasswordHash(),
         UserStatus.PENDING_DELETION,
         getCreatedAt(),
-        OffsetDateTime.now(),
-        OffsetDateTime.now(),
+        Instant.now(),
+        Instant.now(),
         birthDate,
         photoUrl);
+  }
+
+  public boolean isActivated() {
+    return UserStatus.ACTIVE.equals(getStatus());
   }
 }

@@ -15,7 +15,7 @@ import jakarta.persistence.InheritanceType;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
@@ -49,22 +49,22 @@ public abstract class UserJpaEntity {
   private UserStatus status;
 
   @Column(nullable = false, name = "created_at")
-  private OffsetDateTime createdAt;
+  private Instant createdAt;
 
   @Column(nullable = false, name = "updated_at")
-  private OffsetDateTime updatedAt;
+  private Instant updatedAt;
 
   @Column(nullable = true, name = "deleted_at")
-  private OffsetDateTime deletedAt;
+  private Instant deletedAt;
 
   @PrePersist
   private void prePersist() {
-    createdAt = OffsetDateTime.now();
-    updatedAt = OffsetDateTime.now();
+    createdAt = Instant.now();
+    updatedAt = Instant.now();
   }
 
   @PreUpdate
   private void preUpdate() {
-    updatedAt = OffsetDateTime.now();
+    updatedAt = Instant.now();
   }
 }

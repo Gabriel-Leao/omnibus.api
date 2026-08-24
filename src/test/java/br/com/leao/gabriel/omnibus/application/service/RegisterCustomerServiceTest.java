@@ -10,9 +10,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
-import br.com.leao.gabriel.omnibus.domain.port.out.ActivationCodeSenderPort;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,15 +35,20 @@ class RegisterCustomerServiceTest {
   private static final LocalDate BIRTH_DATE = LocalDate.of(2000, 1, 1);
   private static final String PHOTO_URL = "https://example.com/photo.jpg";
 
-  @Mock private CustomerRepositoryPort customerRepository;
+  @Mock
+  private CustomerRepositoryPort customerRepository;
 
-  @Mock private PasswordEncoderPort passwordEncoder;
+  @Mock
+  private PasswordEncoderPort passwordEncoder;
 
-  @Mock private ActivationCodeSenderPort activationCodeSender;
+  @Mock
+  private OtpSenderPort activationCodeSender;
 
-  @Mock private VerificationCodeIssuer verificationCodeIssuer;
+  @Mock
+  private VerificationOtpIssuer verificationOtpIssuer;
 
-  @Mock private Customer savedCustomer;
+  @Mock
+  private Customer savedCustomer;
 
   private RegisterCustomerService service;
 
@@ -51,7 +56,7 @@ class RegisterCustomerServiceTest {
   void setUp() {
     service =
         new RegisterCustomerService(
-            customerRepository, passwordEncoder, activationCodeSender, verificationCodeIssuer);
+            customerRepository, passwordEncoder, activationCodeSender, verificationOtpIssuer);
   }
 
   @Test
@@ -64,7 +69,7 @@ class RegisterCustomerServiceTest {
 
     when(savedCustomer.getId()).thenReturn(CUSTOMER_ID);
 
-    when(verificationCodeIssuer.issue(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(verificationOtpIssuer.issue(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(GENERATED_CODE);
 
     service.execute(NAME, EMAIL, RAW_PASSWORD, BIRTH_DATE, PHOTO_URL);
@@ -83,7 +88,7 @@ class RegisterCustomerServiceTest {
 
     verify(passwordEncoder).encode(RAW_PASSWORD);
 
-    verify(verificationCodeIssuer).issue(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION);
+    verify(verificationOtpIssuer).issue(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION);
 
     verify(activationCodeSender).sendActivationCode(savedCustomer, GENERATED_CODE);
 
@@ -103,7 +108,7 @@ class RegisterCustomerServiceTest {
 
     verify(passwordEncoder, never()).encode(anyString());
 
-    verifyNoInteractions(verificationCodeIssuer);
+    verifyNoInteractions(verificationOtpIssuer);
 
     verify(activationCodeSender, never()).sendActivationCode(any(), anyString());
   }

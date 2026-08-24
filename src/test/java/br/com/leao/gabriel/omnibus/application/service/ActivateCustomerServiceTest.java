@@ -9,11 +9,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import br.com.leao.gabriel.omnibus.application.factory.AuthenticatedPrincipalFactory;
 import br.com.leao.gabriel.omnibus.domain.exception.InvalidVerificationCodeException;
 import br.com.leao.gabriel.omnibus.domain.exception.VerificationAttemptsExceededException;
 import br.com.leao.gabriel.omnibus.domain.model.AuthenticatedPrincipal;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.model.UserToken;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.OtpGeneratorPort;
@@ -36,31 +37,41 @@ class ActivateCustomerServiceTest {
   private static final String CODE_HASH = "hashed-code";
   private static final String ACCESS_TOKEN = "access-token";
 
-  @Mock private CustomerRepositoryPort customerRepository;
+  @Mock
+  private CustomerRepositoryPort customerRepository;
 
-  @Mock private UserTokenRepositoryPort userTokenRepository;
+  @Mock
+  private UserTokenRepositoryPort userTokenRepository;
 
-  @Mock private OtpGeneratorPort otpGenerator;
+  @Mock
+  private OtpGeneratorPort otpGenerator;
 
-  @Mock private TokenIssuerPort tokenIssuer;
+  @Mock
+  private TokenIssuerPort tokenIssuer;
 
-  @Mock private PrincipalFactory principalFactory;
+  @Mock
+  private AuthenticatedPrincipalFactory authenticatedPrincipalFactory;
 
-  @Mock private Customer customer;
+  @Mock
+  private Customer customer;
 
-  @Mock private Customer activatedCustomer;
+  @Mock
+  private Customer activatedCustomer;
 
-  @Mock private UserToken token;
+  @Mock
+  private UserToken token;
 
-  @Mock private AuthenticatedPrincipal principal;
+  @Mock
+  private AuthenticatedPrincipal principal;
 
-  private ActivateCustomerService service;
+  private VerifyOtpService service;
 
   @BeforeEach
   void setUp() {
     service =
-        new ActivateCustomerService(
-            customerRepository, userTokenRepository, otpGenerator, tokenIssuer, principalFactory);
+        new VerifyOtpService(
+            customerRepository, userTokenRepository, otpGenerator, tokenIssuer,
+            authenticatedPrincipalFactory);
   }
 
   @Test
@@ -69,10 +80,10 @@ class ActivateCustomerServiceTest {
     when(customer.getId()).thenReturn(CUSTOMER_ID);
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
 
-    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(Optional.of(token));
 
-    when(token.isActive()).thenReturn(true);
+    when(token.isUsable()).thenReturn(true);
     when(otpGenerator.hash(CODE)).thenReturn(CODE_HASH);
     when(token.getCodeHash()).thenReturn(CODE_HASH);
 
@@ -82,7 +93,7 @@ class ActivateCustomerServiceTest {
 
     when(token.markUsed()).thenReturn(token);
 
-    when(principalFactory.forCustomer(activatedCustomer)).thenReturn(principal);
+    when(authenticatedPrincipalFactory.forCustomer(activatedCustomer)).thenReturn(principal);
     when(tokenIssuer.issueAccessToken(principal)).thenReturn(ACCESS_TOKEN);
 
     String result = service.execute(EMAIL, CODE);
@@ -92,7 +103,7 @@ class ActivateCustomerServiceTest {
     verify(customerRepository).save(activatedCustomer);
     verify(userTokenRepository).save(token);
     verify(token).markUsed();
-    verify(principalFactory).forCustomer(activatedCustomer);
+    verify(authenticatedPrincipalFactory).forCustomer(activatedCustomer);
     verify(tokenIssuer).issueAccessToken(principal);
 
     verify(otpGenerator).hash(CODE);
@@ -105,7 +116,8 @@ class ActivateCustomerServiceTest {
 
     assertThrows(InvalidVerificationCodeException.class, () -> service.execute(EMAIL, CODE));
 
-    verifyNoInteractions(userTokenRepository, otpGenerator, tokenIssuer, principalFactory);
+    verifyNoInteractions(userTokenRepository, otpGenerator, tokenIssuer,
+        authenticatedPrincipalFactory);
   }
 
   @Test
@@ -114,12 +126,12 @@ class ActivateCustomerServiceTest {
     when(customer.getId()).thenReturn(CUSTOMER_ID);
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
 
-    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(Optional.empty());
 
     assertThrows(InvalidVerificationCodeException.class, () -> service.execute(EMAIL, CODE));
 
-    verifyNoInteractions(otpGenerator, tokenIssuer, principalFactory);
+    verifyNoInteractions(otpGenerator, tokenIssuer, authenticatedPrincipalFactory);
   }
 
   @Test
@@ -128,15 +140,15 @@ class ActivateCustomerServiceTest {
     when(customer.getId()).thenReturn(CUSTOMER_ID);
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
 
-    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(Optional.of(token));
 
-    when(token.isActive()).thenReturn(false);
+    when(token.isUsable()).thenReturn(false);
     when(token.isAttemptsExceeded()).thenReturn(false);
 
     assertThrows(InvalidVerificationCodeException.class, () -> service.execute(EMAIL, CODE));
 
-    verifyNoInteractions(otpGenerator, tokenIssuer, principalFactory);
+    verifyNoInteractions(otpGenerator, tokenIssuer, authenticatedPrincipalFactory);
     verify(userTokenRepository, never()).save(any());
   }
 
@@ -146,15 +158,16 @@ class ActivateCustomerServiceTest {
     when(customer.getId()).thenReturn(CUSTOMER_ID);
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
 
-    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(Optional.of(token));
 
-    when(token.isActive()).thenReturn(false);
     when(token.isAttemptsExceeded()).thenReturn(true);
 
-    assertThrows(VerificationAttemptsExceededException.class, () -> service.execute(EMAIL, CODE));
+    assertThrows(
+        VerificationAttemptsExceededException.class,
+        () -> service.execute(EMAIL, CODE));
 
-    verifyNoInteractions(otpGenerator, tokenIssuer, principalFactory);
+    verifyNoInteractions(otpGenerator, tokenIssuer, authenticatedPrincipalFactory);
     verify(userTokenRepository, never()).save(any());
   }
 
@@ -166,22 +179,36 @@ class ActivateCustomerServiceTest {
     when(customer.getId()).thenReturn(CUSTOMER_ID);
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
 
-    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(Optional.of(token));
 
-    when(token.isActive()).thenReturn(true);
+    when(token.isUsable()).thenReturn(true);
     when(otpGenerator.hash(CODE)).thenReturn("wrong-hash");
     when(token.getCodeHash()).thenReturn(CODE_HASH);
-    when(token.incrementAttempts()).thenReturn(incrementedToken);
+    when(token.registerFailedAttempt()).thenReturn(incrementedToken);
 
     assertThrows(InvalidVerificationCodeException.class, () -> service.execute(EMAIL, CODE));
 
-    verify(token).incrementAttempts();
+    verify(token).registerFailedAttempt();
     verify(userTokenRepository).save(incrementedToken);
 
     verify(customerRepository, never()).save(any());
     verify(tokenIssuer, never()).issueAccessToken(any());
-    verify(principalFactory, never()).forCustomer(any());
+    verify(authenticatedPrincipalFactory, never()).forCustomer(any());
+  }
+
+  @Test
+  @DisplayName("Should reject activation when customer is already active")
+  void shouldRejectAlreadyActivatedCustomer() {
+    when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
+    when(customer.isActivated()).thenReturn(true);
+
+    assertThrows(InvalidVerificationCodeException.class, () -> service.execute(EMAIL, CODE));
+
+    verify(customerRepository, never()).save(any());
+    verify(userTokenRepository, never()).findLatestByUserIdAndType(any(), any());
+    verify(userTokenRepository, never()).save(any());
+    verify(tokenIssuer, never()).issueAccessToken(any());
   }
 
   @Test
@@ -190,15 +217,15 @@ class ActivateCustomerServiceTest {
     when(customer.getId()).thenReturn(CUSTOMER_ID);
     when(customerRepository.findByEmail(EMAIL)).thenReturn(Optional.of(customer));
 
-    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, TokenType.ACCOUNT_ACTIVATION))
+    when(userTokenRepository.findLatestByUserIdAndType(CUSTOMER_ID, OtpType.ACCOUNT_ACTIVATION))
         .thenReturn(Optional.of(token));
 
-    when(token.isActive()).thenReturn(false);
+    when(token.isUsable()).thenReturn(false);
     when(token.isAttemptsExceeded()).thenReturn(false);
 
     assertThrows(InvalidVerificationCodeException.class, () -> service.execute(EMAIL, CODE));
 
-    verify(token, never()).incrementAttempts();
+    verify(token, never()).registerFailedAttempt();
     verify(userTokenRepository, never()).save(any());
   }
 }

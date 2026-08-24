@@ -1,6 +1,7 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.security;
 
 import br.com.leao.gabriel.omnibus.adapter.out.security.JwtTokenParser;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -18,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Inbound adapter that intercepts every request, extracts a JWT from the {@code Authorization}
  * header (if present), validates it, and populates the {@link SecurityContextHolder} so downstream
- * authorization checks (e.g. {@code @PreAuthorize}) have access to the caller's identity and
+ * authorisation checks (e.g. {@code @PreAuthorize}) have access to the caller's identity and
  * authorities.
  */
 @Component
@@ -43,8 +44,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       try {
         authenticate(token);
       } catch (JwtException ex) {
-        // Invalid/expired token: leave the security context empty. Protected routes will
-        // reject the request with 401/403; public routes remain unaffected.
         SecurityContextHolder.clearContext();
       }
     }
@@ -54,11 +53,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private void authenticate(String token) {
     Claims claims = tokenParser.parseClaims(token);
-    List<String> authorities = tokenParser.extractAuthorities(claims);
 
-    var grantedAuthorities = authorities.stream().map(SimpleGrantedAuthority::new).toList();
+    List<String> authorities =
+        tokenParser.extractAuthorities(claims);
+
+    if (authorities.contains("PASSWORD_RESET")) {
+      OtpType purpose = tokenParser.extractPurpose(claims);
+
+      if (purpose != OtpType.PASSWORD_RESET) {
+        throw new JwtException("Invalid token purpose");
+      }
+    }
+
+    var grantedAuthorities =
+        authorities.stream()
+            .map(SimpleGrantedAuthority::new)
+            .toList();
+
     var authentication =
-        new UsernamePasswordAuthenticationToken(claims.getSubject(), null, grantedAuthorities);
-    SecurityContextHolder.getContext().setAuthentication(authentication);
+        new UsernamePasswordAuthenticationToken(
+            claims.getSubject(),
+            null,
+            grantedAuthorities);
+
+    SecurityContextHolder.getContext()
+        .setAuthentication(authentication);
   }
 }

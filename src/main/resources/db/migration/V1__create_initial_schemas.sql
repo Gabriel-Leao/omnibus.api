@@ -57,17 +57,20 @@ CREATE TABLE user_tokens
     user_id      UUID        NOT NULL,
     token_hash   VARCHAR(64) NOT NULL,
     token_type   VARCHAR(20) NOT NULL,
+    token_status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE',
     target_email VARCHAR(200),
     attempts     INT         NOT NULL DEFAULT 0,
     expires_at   TIMESTAMPTZ NOT NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     used_at      TIMESTAMPTZ,
+    revoked_at   TIMESTAMPTZ,
 
     CONSTRAINT PK_USER_TOKENS PRIMARY KEY (id),
     CONSTRAINT FK_USER_TOKENS_USER FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT UNIQUE_USER_TOKEN_HASH UNIQUE (token_hash),
     CONSTRAINT CHECK_USER_TOKEN_TYPE CHECK (token_type IN ('ACCOUNT_ACTIVATION', 'PASSWORD_RESET',
                                                            'EMAIL_CHANGE')),
+    CONSTRAINT CHECK_USER_TOKEN_STATUS CHECK (token_status IN ('ACTIVE', 'USED',
+                                                               'REVOKED', 'EXPIRED')),
     CONSTRAINT CHECK_USER_TOKEN_EXPIRY CHECK (expires_at > created_at)
 );
 
@@ -194,9 +197,6 @@ CREATE INDEX IDX_PRODUCTS_STATUS
 CREATE INDEX IDX_USERS_STATUS
     ON users (status);
 CREATE INDEX IDX_USER_TOKENS_USER_TYPE ON user_tokens (user_id, token_type);
-CREATE UNIQUE INDEX UQ_USER_TOKENS_ACTIVE_PER_TYPE
-    ON user_tokens (user_id, token_type)
-    WHERE used_at IS NULL;
 CREATE INDEX IDX_PRODUCT_IMAGES_PRODUCT ON product_images (product_id);
 CREATE INDEX IDX_PRODUCT_LANGUAGES_LANGUAGE ON product_languages (language_id);
 CREATE INDEX IDX_PRODUCT_CATEGORIES_CATEGORY ON product_categories (category_id);
@@ -212,3 +212,6 @@ CREATE INDEX IDX_PRODUCTS_SEARCH
 CREATE UNIQUE INDEX UQ_PRODUCT_PRIMARY_IMAGE
     ON product_images (product_id)
     WHERE is_primary = TRUE;
+CREATE UNIQUE INDEX ux_user_token_one_active
+    ON user_tokens (user_id)
+    WHERE token_status = 'ACTIVE';

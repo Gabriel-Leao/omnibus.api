@@ -11,6 +11,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -100,6 +101,19 @@ public class GlobalExceptionHandler {
     log.warn("Business rule violated on {}: {}", request.getRequestURI(), ex.getMessage());
 
     return build(HttpStatus.BAD_REQUEST, ex.getMessage(), List.of());
+  }
+
+  /**
+   * Handles database constraint violations (e.g. unique-index races) as a safety net for cases that
+   * slip past the application-level locking/validation.
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(
+      DataIntegrityViolationException ex, HttpServletRequest request) {
+
+    log.warn("Data integrity violation on {}: {}", request.getRequestURI(), ex.getMessage());
+
+    return build(HttpStatus.CONFLICT, "Solicitação já em andamento; tente novamente", List.of());
   }
 
   /**

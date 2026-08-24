@@ -1,6 +1,6 @@
 package br.com.leao.gabriel.omnibus.domain.model;
 
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
 
@@ -16,9 +16,9 @@ public abstract class UserAccount {
   private final String passwordHash;
   private final UserStatus status;
   private final AccountType accountType;
-  private final OffsetDateTime createdAt;
-  private final OffsetDateTime updatedAt;
-  private final OffsetDateTime deletedAt;
+  private final Instant createdAt;
+  private final Instant updatedAt;
+  private final Instant deletedAt;
 
   protected UserAccount(
       String id,
@@ -27,9 +27,9 @@ public abstract class UserAccount {
       String passwordHash,
       UserStatus status,
       AccountType accountType,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt,
-      OffsetDateTime deletedAt) {
+      Instant createdAt,
+      Instant updatedAt,
+      Instant deletedAt) {
     this.id = id;
     this.name = Objects.requireNonNull(name, "Name must not be null");
     this.email = Objects.requireNonNull(email, "Email must not be null");
@@ -41,8 +41,8 @@ public abstract class UserAccount {
     this.deletedAt = validateDeletedAtConsistency(status, deletedAt);
   }
 
-  private static OffsetDateTime validateDeletedAtConsistency(
-      UserStatus status, OffsetDateTime deletedAt) {
+  private static Instant validateDeletedAtConsistency(
+      UserStatus status, Instant deletedAt) {
     boolean isPendingDeletion = status == UserStatus.PENDING_DELETION;
     if (isPendingDeletion == (deletedAt == null)) {
       throw new IllegalStateException(

@@ -1,19 +1,21 @@
 package br.com.leao.gabriel.omnibus.domain.model;
 
-import java.time.OffsetDateTime;
+import br.com.leao.gabriel.omnibus.domain.exception.InvalidVerificationCodeException;
+import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
 
 /**
- * A single-use, time-bound verification code, identified only by the hash of its plain value. Used
- * to prove access to an email address before activating an account, resetting a password, or
- * confirming a new email address.
+ * A single-use, time-bound verification code, identified only by the hash of its plain value.
+ *
+ * <p>Tokens can be used for account activation, password reset, email change, or other
+ * verification purposes.
  */
 @Getter
 public class UserToken {
 
   /**
-   * Maximum number of failed verification attempts before the code must be regenerated.
+   * Maximum number of failed verification attempts before the token is revoked.
    */
   public static final int MAX_ATTEMPTS = 3;
 
@@ -25,98 +27,120 @@ public class UserToken {
   private final Long id;
   private final String userId;
   private final String codeHash;
-  private final TokenType type;
+  private final OtpType type;
   private final String targetEmail;
   private final int attempts;
-  private final OffsetDateTime expiresAt;
-  private final OffsetDateTime createdAt;
-  private final OffsetDateTime usedAt;
+  private final TokenStatus tokenStatus;
+  private final Instant expiresAt;
+  private final Instant createdAt;
+  private final Instant usedAt;
+  private final Instant revokedAt;
 
   private UserToken(
       Long id,
       String userId,
       String codeHash,
-      TokenType type,
+      OtpType type,
       String targetEmail,
       int attempts,
-      OffsetDateTime expiresAt,
-      OffsetDateTime createdAt,
-      OffsetDateTime usedAt) {
+      TokenStatus tokenStatus,
+      Instant expiresAt,
+      Instant createdAt,
+      Instant usedAt,
+      Instant revokedAt) {
+
     this.id = id;
     this.userId = Objects.requireNonNull(userId, "User id must not be null");
     this.codeHash = Objects.requireNonNull(codeHash, "Code hash must not be null");
     this.type = Objects.requireNonNull(type, "Type must not be null");
     this.targetEmail = targetEmail;
     this.attempts = attempts;
+    this.tokenStatus = Objects.requireNonNull(tokenStatus, "Status must not be null");
     this.expiresAt = Objects.requireNonNull(expiresAt, "Expiration must not be null");
     this.createdAt = createdAt;
     this.usedAt = usedAt;
+    this.revokedAt = revokedAt;
   }
 
   /**
-   * Issues a new token for activation or password reset (no target email involved).
+   * Issues a new token for activation or password reset.
    */
   public static UserToken issue(
-      String userId, String codeHash, TokenType type, OffsetDateTime expiresAt) {
-    if (type == TokenType.EMAIL_CHANGE) {
-      throw new IllegalArgumentException("Use issueForEmailChange(...) for EMAIL_CHANGE tokens");
+      String userId,
+      String codeHash,
+      OtpType type,
+      Instant expiresAt) {
+
+    if (type == OtpType.EMAIL_CHANGE) {
+      throw new IllegalArgumentException(
+          "Use issueForEmailChange(...) for EMAIL_CHANGE tokens");
     }
-    return new UserToken(null, userId, codeHash, type, null, 0, expiresAt, null, null);
+
+    return new UserToken(
+        null,
+        userId,
+        codeHash,
+        type,
+        null,
+        0,
+        TokenStatus.ACTIVE,
+        expiresAt,
+        Instant.now(),
+        null,
+        null);
   }
 
   /**
    * Issues a new token specifically for confirming a new email address.
    */
   public static UserToken issueForEmailChange(
-      String userId, String codeHash, String targetEmail, OffsetDateTime expiresAt) {
-    Objects.requireNonNull(targetEmail, "Target email must not be null for EMAIL_CHANGE tokens");
+      String userId,
+      String codeHash,
+      String targetEmail,
+      Instant expiresAt) {
+
+    Objects.requireNonNull(
+        targetEmail,
+        "Target email must not be null for EMAIL_CHANGE tokens");
+
     return new UserToken(
-        null, userId, codeHash, TokenType.EMAIL_CHANGE, targetEmail, 0, expiresAt, null, null);
+        null,
+        userId,
+        codeHash,
+        OtpType.EMAIL_CHANGE,
+        targetEmail,
+        0,
+        TokenStatus.ACTIVE,
+        expiresAt,
+        Instant.now(),
+        null,
+        null);
   }
 
   /**
    * Reconstructs a token from its persisted state.
-   *
-   * @param id          the persisted token identifier
-   * @param userId      the identifier of the user associated with the token
-   * @param codeHash    the hash of the verification code
-   * @param type        the token type
-   * @param targetEmail the email address being confirmed, when applicable
-   * @param attempts    the number of failed verification attempts
-   * @param expiresAt   the token expiration time
-   * @param createdAt   the token creation time
-   * @param usedAt      the time the token was consumed, or {@code null} if unused
-   * @return a reconstructed user token
-   * @throws NullPointerException if {@code id} or {@code createdAt} is {@code null}
    */
   public static UserToken reconstruct(
       Long id,
       String userId,
       String codeHash,
-      TokenType type,
+      OtpType type,
       String targetEmail,
       int attempts,
-      OffsetDateTime expiresAt,
-      OffsetDateTime createdAt,
-      OffsetDateTime usedAt) {
-    Objects.requireNonNull(id, "Id must not be null when reconstructing a persisted token");
-    Objects.requireNonNull(createdAt, "CreatedAt must not be null when reconstructing");
-    return new UserToken(
-        id, userId, codeHash, type, targetEmail, attempts, expiresAt, createdAt, usedAt);
-  }
+      TokenStatus status,
+      Instant expiresAt,
+      Instant createdAt,
+      Instant usedAt,
+      Instant revokedAt) {
 
-  /**
-   * Returns a copy of this token with the attempt counter incremented by one.
-   */
-  public UserToken incrementAttempts() {
-    return new UserToken(
-        id, userId, codeHash, type, targetEmail, attempts + 1, expiresAt, createdAt, usedAt);
-  }
+    Objects.requireNonNull(
+        id,
+        "Id must not be null when reconstructing a persisted token");
 
-  /**
-   * Returns a copy of this token marked as used, at the current instant.
-   */
-  public UserToken markUsed() {
+    Objects.requireNonNull(
+        createdAt,
+        "CreatedAt must not be null when reconstructing");
+
     return new UserToken(
         id,
         userId,
@@ -124,17 +148,127 @@ public class UserToken {
         type,
         targetEmail,
         attempts,
+        status,
         expiresAt,
         createdAt,
-        OffsetDateTime.now());
+        usedAt,
+        revokedAt);
   }
 
+  /**
+   * Returns a copy of this token with one additional failed verification attempt.
+   *
+   * <p>When the maximum number of attempts is reached, the token is revoked immediately.
+   */
+  public UserToken registerFailedAttempt() {
+    if (!isUsable()) {
+      throw new InvalidVerificationCodeException();
+    }
+
+    int newAttempts = attempts + 1;
+
+    TokenStatus newStatus =
+        newAttempts >= MAX_ATTEMPTS
+            ? TokenStatus.REVOKED
+            : TokenStatus.ACTIVE;
+
+    return new UserToken(
+        id,
+        userId,
+        codeHash,
+        type,
+        targetEmail,
+        newAttempts,
+        newStatus,
+        expiresAt,
+        createdAt,
+        usedAt,
+        revokedAt);
+  }
+
+  /**
+   * Marks this token as used.
+   */
+  public UserToken markUsed() {
+    if (!isUsable()) {
+      throw new InvalidVerificationCodeException();
+    }
+
+    return new UserToken(
+        id,
+        userId,
+        codeHash,
+        type,
+        targetEmail,
+        attempts,
+        TokenStatus.USED,
+        expiresAt,
+        createdAt,
+        Instant.now(),
+        revokedAt);
+  }
+
+  public boolean isRevoked() {
+    return tokenStatus == TokenStatus.REVOKED;
+  }
+
+  public UserToken revoke() {
+    if (isRevoked()) {
+      return this;
+    }
+
+    return new UserToken(
+        id,
+        userId,
+        codeHash,
+        type,
+        targetEmail,
+        attempts,
+        TokenStatus.REVOKED,
+        expiresAt,
+        createdAt,
+        usedAt,
+        Instant.now());
+  }
+
+  /**
+   * Marks this token as expired when its expiration time has elapsed.
+   */
+  public UserToken expire() {
+    if (tokenStatus != TokenStatus.ACTIVE || !isExpiredByTime()) {
+      return this;
+    }
+
+    return new UserToken(
+        id,
+        userId,
+        codeHash,
+        type,
+        targetEmail,
+        attempts,
+        TokenStatus.EXPIRED,
+        expiresAt,
+        createdAt,
+        usedAt,
+        revokedAt);
+  }
+
+  /**
+   * Returns whether the expiration time has elapsed.
+   *
+   * <p>This check is independent of the persisted status so an expired token cannot be used
+   * even if the scheduled expiration job has not run yet.
+   */
   public boolean isExpired() {
-    return OffsetDateTime.now().isAfter(expiresAt);
+    return isExpiredByTime() || tokenStatus == TokenStatus.EXPIRED;
+  }
+
+  private boolean isExpiredByTime() {
+    return !Instant.now().isBefore(expiresAt);
   }
 
   public boolean isUsed() {
-    return usedAt != null;
+    return tokenStatus == TokenStatus.USED;
   }
 
   public boolean isAttemptsExceeded() {
@@ -142,16 +276,19 @@ public class UserToken {
   }
 
   /**
-   * Whether this token is still eligible for verification.
+   * Whether this token can currently be used for verification.
    */
-  public boolean isActive() {
-    return !isUsed() && !isExpired() && !isAttemptsExceeded();
+  public boolean isUsable() {
+    return tokenStatus == TokenStatus.ACTIVE
+        && !isExpiredByTime()
+        && !isAttemptsExceeded();
   }
 
   /**
    * Whether enough time has passed since issuance to allow requesting a new code.
    */
   public boolean isResendAllowed() {
-    return createdAt.plusSeconds(RESEND_COOLDOWN_SECONDS).isBefore(OffsetDateTime.now());
+    return !Instant.now()
+        .isBefore(createdAt.plusSeconds(RESEND_COOLDOWN_SECONDS));
   }
 }

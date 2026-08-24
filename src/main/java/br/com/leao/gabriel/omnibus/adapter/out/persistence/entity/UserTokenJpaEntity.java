@@ -1,6 +1,7 @@
 package br.com.leao.gabriel.omnibus.adapter.out.persistence.entity;
 
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
+import br.com.leao.gabriel.omnibus.domain.model.TokenStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,7 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,7 +43,7 @@ public class UserTokenJpaEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "token_type", nullable = false)
-  private TokenType tokenType;
+  private OtpType otpType;
 
   @Column(name = "target_email")
   private String targetEmail;
@@ -50,17 +51,24 @@ public class UserTokenJpaEntity {
   @Column(nullable = false)
   private int attempts;
 
+  @Column(nullable = false, name = "token_status")
+  @Enumerated(EnumType.STRING)
+  private TokenStatus tokenStatus;
+
   @Column(name = "expires_at", nullable = false)
-  private OffsetDateTime expiresAt;
+  private Instant expiresAt;
 
   @Column(name = "created_at", nullable = false)
-  private OffsetDateTime createdAt;
+  private Instant createdAt;
 
   @Column(name = "used_at")
-  private OffsetDateTime usedAt;
+  private Instant usedAt;
+
+  @Column(name = "revoked_at")
+  private Instant revokedAt;
 
   @PrePersist
   protected void onCreate() {
-    createdAt = OffsetDateTime.now();
+    createdAt = Instant.now();
   }
 }

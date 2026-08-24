@@ -1,0 +1,83 @@
+package br.com.leao.gabriel.omnibus.adapter.in.web.controller;
+
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.EmailRequest;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.ResetPasswordRequest;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.request.VerifyCodeRequest;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.PasswordResetTokenResponse;
+import br.com.leao.gabriel.omnibus.adapter.in.web.dto.response.RegistrationResponse;
+import br.com.leao.gabriel.omnibus.application.usecase.ResetPasswordUseCase;
+import br.com.leao.gabriel.omnibus.application.usecase.SendOtpUseCase;
+import br.com.leao.gabriel.omnibus.application.usecase.VerifyPasswordResetUseCase;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
+import jakarta.validation.Valid;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/password-reset")
+@RequiredArgsConstructor
+public class PasswordResetController {
+
+  private final SendOtpUseCase sendOtpUseCase;
+  private final VerifyPasswordResetUseCase verifyPasswordResetOtpUseCase;
+  private final ResetPasswordUseCase resetPasswordUseCase;
+
+  /**
+   * Requests a password reset OTP to be sent to the given email address. * * <p>The response does
+   * not reveal whether an account is associated with the given email address. * * @param request
+   * the request containing the email address associated with the account
+   */
+  @PostMapping()
+  public ResponseEntity<RegistrationResponse> requestPasswordReset(
+      @Valid @RequestBody EmailRequest request) {
+    sendOtpUseCase.execute(request.email(), OtpType.PASSWORD_RESET);
+    return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationResponse.standard());
+  }
+
+  /**
+   * Verifies the password reset OTP and issues a short-lived password reset token.
+   *
+   * @param request the password reset verification request containing the email and OTP
+   * @return a short-lived token authorising the password reset
+   */
+  @PostMapping("/verify")
+  public ResponseEntity<PasswordResetTokenResponse> verifyPasswordResetOtp(
+      @Valid @RequestBody VerifyCodeRequest request) {
+
+    String resetToken = verifyPasswordResetOtpUseCase.execute(
+        request.email(),
+        request.code()
+    );
+
+    return ResponseEntity.ok(new PasswordResetTokenResponse(resetToken));
+  }
+
+  /**
+   * Resets the authenticated user's password.
+   *
+   * <p>The user must be authenticated with a valid password reset token issued after successfully
+   * verifying the password reset code.
+   *
+   * @param userId  the ID of the user represented by the password reset token
+   * @param request the request containing the new password
+   */
+  @PostMapping("/confirm")
+  public ResponseEntity<Void> resetPassword(
+      @AuthenticationPrincipal String userId,
+      @Valid @RequestBody ResetPasswordRequest request) {
+
+    resetPasswordUseCase.execute(
+        UUID.fromString(userId),
+        request.password()
+    );
+
+    return ResponseEntity.noContent().build();
+  }
+}

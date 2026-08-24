@@ -1,19 +1,21 @@
 package br.com.leao.gabriel.omnibus.domain.port.out;
 
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 
 /**
  * Output port for sending account-registration-related emails to customers.
  */
-public interface ActivationCodeSenderPort {
+public interface OtpSenderPort {
 
   /**
-   * Sends an activation code to a newly registered customer.
+   * Sends an OTP to a customer.
    *
-   * @param customer the customer who just registered
-   * @param code     the plain-text activation code
+   * @param customer the customer receiving the OTP
+   * @param code     the plain-text OTP
+   * @param OtpType  the purpose of the OTP
    */
-  void sendActivationCode(Customer customer, String code);
+  void sendOtp(Customer customer, String code, OtpType OtpType);
 
   /**
    * Notifies an existing account holder that someone attempted to register with their email.

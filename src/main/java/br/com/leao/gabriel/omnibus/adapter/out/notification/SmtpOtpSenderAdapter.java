@@ -2,7 +2,8 @@ package br.com.leao.gabriel.omnibus.adapter.out.notification;
 
 import br.com.leao.gabriel.omnibus.domain.exception.RegistrationEmailDeliveryException;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
-import br.com.leao.gabriel.omnibus.domain.port.out.ActivationCodeSenderPort;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
+import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
@@ -15,20 +16,26 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-public class SmtpActivationCodeSenderAdapter implements ActivationCodeSenderPort {
+public class SmtpOtpSenderAdapter implements OtpSenderPort {
 
   private final JavaMailSender mailSender;
 
   @Value("${email.sender-address}")
   private String senderAddress;
 
+  /**
+   * @param customer the customer receiving the OTP
+   * @param code     the plain-text OTP
+   * @param OtpType  the purpose of the OTP
+   */
   @Override
-  public void sendActivationCode(Customer customer, String code) {
+  public void sendOtp(Customer customer, String code, OtpType OtpType) {
+    String subject = OtpType.getEmailSubject();
     try {
       SimpleMailMessage message = new SimpleMailMessage();
       message.setFrom(senderAddress);
       message.setTo(customer.getEmail());
-      message.setSubject("Confirme sua conta Omnibus");
+      message.setSubject(subject);
       message.setText(
           "Olá, "
               + customer.getName()

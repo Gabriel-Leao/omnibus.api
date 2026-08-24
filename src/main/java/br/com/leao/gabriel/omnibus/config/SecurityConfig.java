@@ -3,6 +3,7 @@ package br.com.leao.gabriel.omnibus.config;
 import br.com.leao.gabriel.omnibus.adapter.in.web.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -66,9 +67,18 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/auth/**")
+                auth
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/password-reset/confirm")
+                    .hasAuthority("PASSWORD_RESET")
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/password-reset",
+                        "/password-reset/verify")
                     .permitAll()
-                    // TODO(next step): tighten remaining routes as each module is implemented
+                    .requestMatchers("/auth/**")
+                    .permitAll()
                     .anyRequest()
                     .permitAll())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

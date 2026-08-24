@@ -1,15 +1,15 @@
 package br.com.leao.gabriel.omnibus.application.service;
 
+import br.com.leao.gabriel.omnibus.application.usecase.RegisterCustomerUseCase;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
-import br.com.leao.gabriel.omnibus.domain.model.TokenType;
-import br.com.leao.gabriel.omnibus.domain.port.in.RegisterCustomerUseCase;
-import br.com.leao.gabriel.omnibus.domain.port.out.ActivationCodeSenderPort;
+import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
-import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Handles customer registration. To avoid user enumeration, this service always completes
@@ -22,8 +22,8 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
 
   private final CustomerRepositoryPort customerRepository;
   private final PasswordEncoderPort passwordEncoder;
-  private final ActivationCodeSenderPort activationCodeSender;
-  private final VerificationCodeIssuer verificationCodeIssuer;
+  private final OtpSenderPort activationCodeSender;
+  private final VerificationOtpIssuer verificationOtpIssuer;
 
   @Override
   @Transactional
@@ -38,7 +38,7 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
     Customer customer = Customer.register(name, email, passwordHash, birthDate, photoUrl);
     Customer savedCustomer = customerRepository.save(customer);
 
-    String code = verificationCodeIssuer.issue(savedCustomer.getId(), TokenType.ACCOUNT_ACTIVATION);
-    activationCodeSender.sendActivationCode(savedCustomer, code);
+    String code = verificationOtpIssuer.issue(savedCustomer.getId(), OtpType.ACCOUNT_ACTIVATION);
+    activationCodeSender.sendOtp(savedCustomer, code, OtpType.ACCOUNT_ACTIVATION);
   }
 }

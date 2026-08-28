@@ -27,16 +27,11 @@ class ResetPasswordServiceTest {
   private static final String NEW_PASSWORD = "new-password";
   private static final String PASSWORD_HASH = "hashed-password";
 
-  @Mock
-  private CustomerRepositoryPort customerRepository;
-  @Mock
-  private PasswordEncoder passwordEncoder;
-  @Mock
-  private OtpSenderPort otpSender;
-  @Mock
-  private Customer customer;
-  @Mock
-  private Customer updatedCustomer;
+  @Mock private CustomerRepositoryPort customerRepository;
+  @Mock private PasswordEncoder passwordEncoder;
+  @Mock private OtpSenderPort otpSender;
+  @Mock private Customer customer;
+  @Mock private Customer updatedCustomer;
 
   private ResetPasswordService service;
 

@@ -153,8 +153,7 @@ public class UserToken {
 
     int newAttempts = attempts + 1;
 
-    TokenStatus newStatus =
-        newAttempts >= MAX_ATTEMPTS ? TokenStatus.REVOKED : TokenStatus.ACTIVE;
+    TokenStatus newStatus = newAttempts >= MAX_ATTEMPTS ? TokenStatus.REVOKED : TokenStatus.ACTIVE;
 
     return new UserToken(
         id,

@@ -31,8 +31,11 @@ public class ActivateAccountService implements ActivateAccountUseCase {
    * @return a signed access token
    */
   @Override
-  @Transactional(noRollbackFor = {InvalidVerificationCodeException.class,
-      VerificationAttemptsExceededException.class})
+  @Transactional(
+      noRollbackFor = {
+        InvalidVerificationCodeException.class,
+        VerificationAttemptsExceededException.class
+      })
   public String execute(String email, String code) {
 
     var customer = otpVerifier.verify(email, code, OtpType.ACCOUNT_ACTIVATION);

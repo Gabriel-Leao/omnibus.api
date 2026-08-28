@@ -3,6 +3,7 @@ package br.com.leao.gabriel.omnibus.application.service;
 import br.com.leao.gabriel.omnibus.application.factory.AuthenticatedPrincipalFactory;
 import br.com.leao.gabriel.omnibus.application.usecase.ActivateAccountUseCase;
 import br.com.leao.gabriel.omnibus.domain.exception.InvalidVerificationCodeException;
+import br.com.leao.gabriel.omnibus.domain.exception.VerificationAttemptsExceededException;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.TokenIssuerPort;
@@ -26,13 +27,12 @@ public class ActivateAccountService implements ActivateAccountUseCase {
    * Activates a customer account and issues an access token.
    *
    * @param email the customer's email address
-   *
-   * @param code the submitted activation code
-   *
+   * @param code  the submitted activation code
    * @return a signed access token
    */
   @Override
-  @Transactional(noRollbackFor = InvalidVerificationCodeException.class)
+  @Transactional(noRollbackFor = {InvalidVerificationCodeException.class,
+      VerificationAttemptsExceededException.class})
   public String execute(String email, String code) {
 
     var customer = otpVerifier.verify(email, code, OtpType.ACCOUNT_ACTIVATION);

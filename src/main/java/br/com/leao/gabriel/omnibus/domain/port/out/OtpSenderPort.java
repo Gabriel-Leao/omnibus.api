@@ -12,9 +12,7 @@ public interface OtpSenderPort {
    * Sends an OTP to a customer.
    *
    * @param customer the customer receiving the OTP
-   *
    * @param code     the plain-text OTP
-   *
    * @param otpType  the purpose of the OTP
    */
   void sendOtp(Customer customer, String code, OtpType otpType);
@@ -25,4 +23,12 @@ public interface OtpSenderPort {
    * @param email the email address that was already registered
    */
   void sendDuplicateRegistrationNotice(String email);
+
+  /**
+   * Notifies an existing account holder that someone reset their password using their email
+   * address.
+   *
+   * @param email the email address that is already registered
+   */
+  void sendPasswordResetNotice(String email);
 }

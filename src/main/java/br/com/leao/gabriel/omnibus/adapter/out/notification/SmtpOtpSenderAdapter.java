@@ -27,8 +27,8 @@ public class SmtpOtpSenderAdapter implements OtpSenderPort {
    * Sends an OTP to the specified customer.
    *
    * @param customer the customer receiving the OTP
-   * @param code the plain-text OTP
-   * @param otpType the purpose of the OTP
+   * @param code     the plain-text OTP
+   * @param otpType  the purpose of the OTP
    */
   @Override
   public void sendOtp(Customer customer, String code, OtpType otpType) {
@@ -67,6 +67,16 @@ public class SmtpOtpSenderAdapter implements OtpSenderPort {
         "Alguém tentou criar uma conta com este e-mail, mas você já possui uma conta na "
             + "Omnibus. Se foi você, faça login normalmente. Se não foi você, ignore este "
             + "e-mail.");
+    mailSender.send(message);
+  }
+
+  @Override
+  public void sendPasswordResetNotice(String email) {
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setFrom(senderAddress);
+    message.setTo(email);
+    message.setSubject("Sua senha foi alterada com sucesso!");
+    message.setText("Sua senha no Omnibus foi alterada com sucesso.");
     mailSender.send(message);
   }
 }

@@ -15,7 +15,7 @@ import lombok.Getter;
 public class UserToken {
 
   /**
-   * Maximum number of failed verification attempts before the token is revoked.
+   * Maximum number of verification attempts allowed for the token.
    */
   public static final int MAX_ATTEMPTS = 3;
 
@@ -142,7 +142,7 @@ public class UserToken {
   }
 
   /**
-   * Returns a copy of this token with one additional failed verification attempt.
+   * Returns a copy of this token with one additional verification attempt.
    *
    * <p>When the maximum number of attempts is reached, the token is revoked immediately.
    */
@@ -153,7 +153,8 @@ public class UserToken {
 
     int newAttempts = attempts + 1;
 
-    TokenStatus newStatus = newAttempts >= MAX_ATTEMPTS ? TokenStatus.REVOKED : TokenStatus.ACTIVE;
+    TokenStatus newStatus =
+        newAttempts >= MAX_ATTEMPTS ? TokenStatus.REVOKED : TokenStatus.ACTIVE;
 
     return new UserToken(
         id,
@@ -170,7 +171,7 @@ public class UserToken {
   }
 
   /**
-   * Marks this token as used.
+   * Marks this token as used after a successful verification attempt.
    */
   public UserToken markUsed() {
     if (!isUsable()) {
@@ -183,7 +184,7 @@ public class UserToken {
         codeHash,
         type,
         targetEmail,
-        attempts,
+        attempts + 1,
         TokenStatus.USED,
         expiresAt,
         createdAt,
@@ -270,7 +271,7 @@ public class UserToken {
   }
 
   /**
-   * Returns whether the maximum verification attempts have been exceeded.
+   * Returns whether the maximum number of verification attempts has been reached.
    *
    * @return {@code true} when the maximum attempt count has been reached
    */

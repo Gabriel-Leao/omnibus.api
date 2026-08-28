@@ -22,6 +22,13 @@ public class UserTokenPersistenceAdapter implements UserTokenRepositoryPort {
   private final UserTokenJpaRepository jpaRepository;
   private final UserTokenPersistenceMapper mapper;
 
+  /**
+   * Saves a user token.
+   *
+   * @param token the domain token to persist
+   *
+   * @return the persisted token
+   */
   @Override
   public UserToken save(UserToken token) {
     UserTokenJpaEntity entity = mapper.toEntity(token);
@@ -29,6 +36,15 @@ public class UserTokenPersistenceAdapter implements UserTokenRepositoryPort {
     return mapper.toDomain(saved);
   }
 
+  /**
+   * Finds the latest token issued for a user and token type.
+   *
+   * @param userId the user's identifier
+   *
+   * @param type the token type
+   *
+   * @return the latest matching token, if one exists
+   */
   @Override
   public Optional<UserToken> findLatestByUserIdAndType(String userId, OtpType type) {
     return jpaRepository
@@ -36,11 +52,19 @@ public class UserTokenPersistenceAdapter implements UserTokenRepositoryPort {
         .map(mapper::toDomain);
   }
 
+  /**
+   * Deletes a persisted token by its identifier.
+   *
+   * @param id the token identifier
+   */
   @Override
   public void deleteById(Long id) {
     jpaRepository.deleteById(id);
   }
 
+  /**
+   * Flushes pending token persistence operations.
+   */
   @Override
   public void flush() {
     jpaRepository.flush();
@@ -48,7 +72,7 @@ public class UserTokenPersistenceAdapter implements UserTokenRepositoryPort {
 
   /**
    * Finds the currently active token for the specified user, locking the row so concurrent issuance
-   * requests for the same user serialize instead of racing.
+   * requests for the same user serialise instead of racing.
    *
    * @param userId the user's identifier
    */

@@ -1,5 +1,6 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.dto.request;
 
-public record VerifyPasswordResetOtpRequest() {
-
-}
+/**
+ * Request payload for verifying a password reset OTP.
+ */
+public record VerifyPasswordResetOtpRequest() {}

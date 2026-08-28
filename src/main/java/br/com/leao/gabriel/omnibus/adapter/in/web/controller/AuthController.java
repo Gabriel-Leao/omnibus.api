@@ -37,6 +37,7 @@ public class AuthController {
    * Authenticates a customer or staff member and issues a JWT access token.
    *
    * @param request the login credentials
+   *
    * @return {@code 200 OK} with the issued access token
    */
   @PostMapping("/login")
@@ -51,6 +52,7 @@ public class AuthController {
    * communicated exclusively by email.
    *
    * @param requestData the registration data, already validated by Bean Validation
+   *
    * @return {@code 202 Accepted} with a generic confirmation message
    */
   @PostMapping("/register")
@@ -69,6 +71,7 @@ public class AuthController {
    * Activates a customer account using the one-time code sent by email during registration.
    *
    * @param request the email and verification code
+   *
    * @return {@code 200 OK} with the issued access token
    */
   @PostMapping("/activate")
@@ -85,8 +88,9 @@ public class AuthController {
    * a customer, to prevent user enumeration; the actual outcome is communicated exclusively by
    * email.
    *
-   * @param request the email address for which the activation code should be resent, already ```
-   *                validated by Bean Validation ```
+   * @param request the email address for which the activation code should be resent, already
+   *     validated by Bean Validation
+   *
    * @return {@code 202 Accepted} with a generic confirmation message
    */
   @PostMapping("/resend-activation")

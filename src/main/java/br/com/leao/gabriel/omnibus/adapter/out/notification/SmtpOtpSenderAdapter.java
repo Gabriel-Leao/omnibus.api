@@ -24,13 +24,15 @@ public class SmtpOtpSenderAdapter implements OtpSenderPort {
   private String senderAddress;
 
   /**
+   * Sends an OTP to the specified customer.
+   *
    * @param customer the customer receiving the OTP
-   * @param code     the plain-text OTP
-   * @param OtpType  the purpose of the OTP
+   * @param code the plain-text OTP
+   * @param otpType the purpose of the OTP
    */
   @Override
-  public void sendOtp(Customer customer, String code, OtpType OtpType) {
-    String subject = OtpType.getEmailSubject();
+  public void sendOtp(Customer customer, String code, OtpType otpType) {
+    String subject = otpType.getEmailSubject();
     try {
       SimpleMailMessage message = new SimpleMailMessage();
       message.setFrom(senderAddress);
@@ -50,6 +52,11 @@ public class SmtpOtpSenderAdapter implements OtpSenderPort {
     }
   }
 
+  /**
+   * Sends a notice when an already registered email is used for registration.
+   *
+   * @param email the email address that was already registered
+   */
   @Override
   public void sendDuplicateRegistrationNotice(String email) {
     SimpleMailMessage message = new SimpleMailMessage();

@@ -9,8 +9,11 @@ public interface LoginUseCase {
    * Authenticates a user and issues an access token upon success.
    *
    * @param email       the user's email
+   *
    * @param rawPassword the user's plain-text password, as submitted
+   *
    * @return a signed access token
+   *
    * @throws br.com.leao.gabriel.omnibus.domain.exception.InvalidCredentialsException if the
    *                                                                                  email/password
    *                                                                                  combination is

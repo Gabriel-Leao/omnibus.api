@@ -13,7 +13,9 @@ public class MinimumAgeValidator implements ConstraintValidator<MinimumAge, Loca
   private int minimumAge;
 
   /**
-   * Initializes the validator with the configured minimum age.
+   * Initialises the validator with the configured minimum age.
+   *
+   * @param constraintAnnotation the validation constraint configuration
    */
   @Override
   public void initialize(MinimumAge constraintAnnotation) {

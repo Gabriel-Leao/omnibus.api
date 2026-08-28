@@ -20,6 +20,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
   private final CustomerRepositoryPort customerRepository;
   private final StaffRepositoryPort staffRepository;
 
+  /**
+   * Loads the user details associated with an email address.
+   *
+   * @param email the email address used for authentication
+   *
+   * @return the corresponding Spring Security user details
+   *
+   * @throws UsernameNotFoundException when no matching account exists
+   */
   @Override
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
     return customerRepository

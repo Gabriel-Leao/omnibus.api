@@ -30,6 +30,14 @@ public class AuthenticationService implements LoginUseCase {
   private final TokenIssuerPort tokenIssuer;
   private final AuthenticatedPrincipalFactory authenticatedPrincipalFactory;
 
+  /**
+   * Authenticates a customer or staff account and issues an access token.
+   *
+   * @param email       the user's email address
+   * @param rawPassword the submitted plain-text password
+   * @return a signed access token
+   * @throws InvalidCredentialsException when credentials are invalid or the account is not active
+   */
   @Override
   public String execute(String email, String rawPassword) {
     var customer = customerRepository.findByEmail(email);

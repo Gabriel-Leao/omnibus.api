@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles requests to send verification OTPs to customers.
+ */
 @Service
 @RequiredArgsConstructor
 public class SendOtpService implements SendOtpUseCase {
@@ -19,6 +22,13 @@ public class SendOtpService implements SendOtpUseCase {
   private final OtpSenderPort otpSender;
   private final UserTokenRepositoryPort userTokenRepository;
 
+  /**
+   * Sends a verification OTP when the customer is eligible and the resend cooldown has elapsed.
+   *
+   * @param email the customer's email address
+   *
+   * @param otpType the purpose of the OTP
+   */
   @Override
   @Transactional
   public void execute(String email, OtpType otpType) {
@@ -30,14 +40,12 @@ public class SendOtpService implements SendOtpUseCase {
 
     var customer = customerOptional.get();
 
-    if (isEligible(customer.isActivated(), otpType)) {
+    if (isNotEligible(customer.isActivated(), otpType)) {
       return;
     }
 
     var token =
-        userTokenRepository
-            .findLatestByUserIdAndType(customer.getId(), otpType)
-            .orElse(null);
+        userTokenRepository.findLatestByUserIdAndType(customer.getId(), otpType).orElse(null);
 
     if (token != null && !token.isResendAllowed()) {
       throw new ResendCooldownActiveException();
@@ -48,7 +56,7 @@ public class SendOtpService implements SendOtpUseCase {
     otpSender.sendOtp(customer, otp, otpType);
   }
 
-  private boolean isEligible(boolean activated, OtpType otpType) {
+  private boolean isNotEligible(boolean activated, OtpType otpType) {
     return switch (otpType) {
       case ACCOUNT_ACTIVATION -> activated;
       case PASSWORD_RESET, EMAIL_CHANGE -> !activated;

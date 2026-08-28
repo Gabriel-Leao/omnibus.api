@@ -25,6 +25,9 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
   private final OtpSenderPort activationCodeSender;
   private final VerificationOtpIssuer verificationOtpIssuer;
 
+  /**
+   * Handles the execute operation.
+   */
   @Override
   @Transactional
   public void execute(

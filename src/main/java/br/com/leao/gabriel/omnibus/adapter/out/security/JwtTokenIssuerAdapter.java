@@ -24,18 +24,29 @@ public class JwtTokenIssuerAdapter implements TokenIssuerPort {
   private final long accessExpirationMinutes;
   private final long passwordResetExpirationMinutes;
 
+  /**
+   * Creates the JWT token issuer with the configured signing properties.
+   *
+   * @param secret the secret used to sign JWTs
+   * @param accessExpirationMinutes the access token lifetime in minutes
+   * @param passwordResetExpirationMinutes the password reset token lifetime in minutes
+   */
   public JwtTokenIssuerAdapter(
       @Value("${jwt.secret}") String secret,
       @Value("${jwt.access-token-expiration-minutes}") long accessExpirationMinutes,
       @Value("${jwt.password-reset-expiration-minutes}") long passwordResetExpirationMinutes) {
 
-    this.signingKey = Keys.hmacShaKeyFor(
-        secret.getBytes(StandardCharsets.UTF_8)
-    );
+    this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     this.accessExpirationMinutes = accessExpirationMinutes;
     this.passwordResetExpirationMinutes = passwordResetExpirationMinutes;
   }
 
+  /**
+   * Issues an access token for an authenticated principal.
+   *
+   * @param principal the authenticated user's identity and authorities
+   * @return a signed access token
+   */
   @Override
   public String issueAccessToken(AuthenticatedPrincipal principal) {
     Instant now = Instant.now();
@@ -50,8 +61,10 @@ public class JwtTokenIssuerAdapter implements TokenIssuerPort {
   }
 
   /**
+   * Issues a short-lived token for password reset.
+   *
    * @param userId the ID of the user authorised to reset their password
-   * @return signed short-lived reset password token
+   * @return a signed short-lived password reset token
    */
   @Override
   public String issuePasswordResetToken(String userId) {

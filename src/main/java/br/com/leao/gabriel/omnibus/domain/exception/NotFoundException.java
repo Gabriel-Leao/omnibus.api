@@ -1,10 +1,12 @@
 package br.com.leao.gabriel.omnibus.domain.exception;
 
 /**
- * Main initialisation class for the Omnibus API application.
+ * Base exception for resources or entities that cannot be found.
  */
 public abstract class NotFoundException extends DomainException {
-
+  /**
+   * Handles the NotFoundException operation.
+   */
   protected NotFoundException(String message) {
     super(message);
   }

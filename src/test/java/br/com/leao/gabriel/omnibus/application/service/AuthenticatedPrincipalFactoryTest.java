@@ -22,11 +22,9 @@ class AuthenticatedPrincipalFactoryTest {
 
   private final AuthenticatedPrincipalFactory factory = new AuthenticatedPrincipalFactory();
 
-  @Mock
-  private Customer customer;
+  @Mock private Customer customer;
 
-  @Mock
-  private Staff staff;
+  @Mock private Staff staff;
 
   @Test
   @DisplayName("Should create customer principal with ROLE_CUSTOMER")

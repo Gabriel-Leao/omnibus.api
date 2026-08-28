@@ -11,5 +11,14 @@ import java.time.LocalDate;
  */
 public interface RegisterCustomerUseCase {
 
+  /**
+   * Registers a new customer account.
+   *
+   * @param name        the customer's name
+   * @param email       the customer's email address
+   * @param rawPassword the customer's plain-text password
+   * @param birthDate   the customer's date of birth
+   * @param photoUrl    the customer's optional profile photo URL
+   */
   void execute(String name, String email, String rawPassword, LocalDate birthDate, String photoUrl);
 }

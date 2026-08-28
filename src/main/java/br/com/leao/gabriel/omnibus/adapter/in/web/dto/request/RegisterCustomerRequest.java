@@ -12,6 +12,18 @@ import org.hibernate.validator.constraints.URL;
 
 /**
  * Represents and validates the data required to register a customer.
+ *
+ * @param name the name
+ *
+ * @param email the email
+ *
+ * @param password the password
+ *
+ * @param confirmPassword the confirmPassword
+ *
+ * @param birthDate the birthDate
+ *
+ * @param photoUrl the photoUrl
  */
 @PasswordMatches
 public record RegisterCustomerRequest(

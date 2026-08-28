@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Centralizes verification code issuance.
+ * Centralises verification code issuance.
  *
  * <p>Responsible for enforcing issuance limits, revoking previous active tokens, generating and
  * hashing the code, persisting the token, and returning the plain-text code to the caller.
@@ -34,7 +34,9 @@ public class VerificationOtpIssuer {
    * Issues a verification code using the default expiration time.
    *
    * @param userId the user's identifier
+   *
    * @param type   the type of token to issue
+   *
    * @return the generated plain-text verification code
    */
   public String issue(String userId, OtpType type) {
@@ -45,54 +47,47 @@ public class VerificationOtpIssuer {
    * Issues a verification code using a custom expiration time.
    *
    * @param userId            the user's identifier
+   *
    * @param type              the type of token to issue
+   *
    * @param expirationMinutes the number of minutes until the token expires
+   *
    * @return the generated plain-text verification code
    */
-  public String issue(
-      String userId,
-      OtpType type,
-      long expirationMinutes) {
+  public String issue(String userId, OtpType type, long expirationMinutes) {
 
-    return issueInternal(
-        userId,
-        type,
-        null,
-        expirationMinutes);
+    return issueInternal(userId, type, null, expirationMinutes);
   }
 
   /**
    * Issues a verification code for an email change.
    *
    * @param userId      the user's identifier
+   *
    * @param targetEmail the new email address
+   *
    * @return the generated plain-text verification code
    */
-  public String issueForEmailChange(
-      String userId,
-      String targetEmail) {
+  public String issueForEmailChange(String userId, String targetEmail) {
 
-    return issueInternal(
-        userId,
-        OtpType.EMAIL_CHANGE,
-        targetEmail,
-        DEFAULT_EXPIRATION_MINUTES);
+    return issueInternal(userId, OtpType.EMAIL_CHANGE, targetEmail, DEFAULT_EXPIRATION_MINUTES);
   }
 
   /**
    * Creates, persists, and returns a verification code.
    *
    * @param userId            the user's identifier
+   *
    * @param type              the type of token to issue
+   *
    * @param targetEmail       the target email address for email-change tokens
+   *
    * @param expirationMinutes the number of minutes until the token expires
+   *
    * @return the generated plain-text verification code
    */
   protected String issueInternal(
-      String userId,
-      OtpType type,
-      String targetEmail,
-      long expirationMinutes) {
+      String userId, OtpType type, String targetEmail, long expirationMinutes) {
 
     long count = rateLimiter.incrementAndGet(userId, type);
 
@@ -102,9 +97,7 @@ public class VerificationOtpIssuer {
 
     var activeToken = userTokenRepository.findActiveByUserId(userId);
 
-    activeToken.ifPresent(token ->
-        userTokenRepository.save(token.revoke())
-    );
+    activeToken.ifPresent(token -> userTokenRepository.save(token.revoke()));
 
     userTokenRepository.flush();
 

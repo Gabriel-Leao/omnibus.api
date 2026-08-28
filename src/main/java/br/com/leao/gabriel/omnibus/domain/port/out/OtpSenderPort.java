@@ -12,10 +12,12 @@ public interface OtpSenderPort {
    * Sends an OTP to a customer.
    *
    * @param customer the customer receiving the OTP
+   *
    * @param code     the plain-text OTP
-   * @param OtpType  the purpose of the OTP
+   *
+   * @param otpType  the purpose of the OTP
    */
-  void sendOtp(Customer customer, String code, OtpType OtpType);
+  void sendOtp(Customer customer, String code, OtpType otpType);
 
   /**
    * Notifies an existing account holder that someone attempted to register with their email.

@@ -65,15 +65,10 @@ public class UserToken {
   /**
    * Issues a new token for activation or password reset.
    */
-  public static UserToken issue(
-      String userId,
-      String codeHash,
-      OtpType type,
-      Instant expiresAt) {
+  public static UserToken issue(String userId, String codeHash, OtpType type, Instant expiresAt) {
 
     if (type == OtpType.EMAIL_CHANGE) {
-      throw new IllegalArgumentException(
-          "Use issueForEmailChange(...) for EMAIL_CHANGE tokens");
+      throw new IllegalArgumentException("Use issueForEmailChange(...) for EMAIL_CHANGE tokens");
     }
 
     return new UserToken(
@@ -94,14 +89,9 @@ public class UserToken {
    * Issues a new token specifically for confirming a new email address.
    */
   public static UserToken issueForEmailChange(
-      String userId,
-      String codeHash,
-      String targetEmail,
-      Instant expiresAt) {
+      String userId, String codeHash, String targetEmail, Instant expiresAt) {
 
-    Objects.requireNonNull(
-        targetEmail,
-        "Target email must not be null for EMAIL_CHANGE tokens");
+    Objects.requireNonNull(targetEmail, "Target email must not be null for EMAIL_CHANGE tokens");
 
     return new UserToken(
         null,
@@ -133,13 +123,9 @@ public class UserToken {
       Instant usedAt,
       Instant revokedAt) {
 
-    Objects.requireNonNull(
-        id,
-        "Id must not be null when reconstructing a persisted token");
+    Objects.requireNonNull(id, "Id must not be null when reconstructing a persisted token");
 
-    Objects.requireNonNull(
-        createdAt,
-        "CreatedAt must not be null when reconstructing");
+    Objects.requireNonNull(createdAt, "CreatedAt must not be null when reconstructing");
 
     return new UserToken(
         id,
@@ -167,10 +153,7 @@ public class UserToken {
 
     int newAttempts = attempts + 1;
 
-    TokenStatus newStatus =
-        newAttempts >= MAX_ATTEMPTS
-            ? TokenStatus.REVOKED
-            : TokenStatus.ACTIVE;
+    TokenStatus newStatus = newAttempts >= MAX_ATTEMPTS ? TokenStatus.REVOKED : TokenStatus.ACTIVE;
 
     return new UserToken(
         id,
@@ -208,10 +191,20 @@ public class UserToken {
         revokedAt);
   }
 
+  /**
+   * Returns whether this token has been revoked.
+   *
+   * @return {@code true} when the token is revoked
+   */
   public boolean isRevoked() {
     return tokenStatus == TokenStatus.REVOKED;
   }
 
+  /**
+   * Returns a copy of this token marked as revoked.
+   *
+   * @return the revoked token
+   */
   public UserToken revoke() {
     if (isRevoked()) {
       return this;
@@ -267,10 +260,20 @@ public class UserToken {
     return !Instant.now().isBefore(expiresAt);
   }
 
+  /**
+   * Returns whether this token has already been used.
+   *
+   * @return {@code true} when the token has been used
+   */
   public boolean isUsed() {
     return tokenStatus == TokenStatus.USED;
   }
 
+  /**
+   * Returns whether the maximum verification attempts have been exceeded.
+   *
+   * @return {@code true} when the maximum attempt count has been reached
+   */
   public boolean isAttemptsExceeded() {
     return attempts >= MAX_ATTEMPTS;
   }
@@ -279,16 +282,13 @@ public class UserToken {
    * Whether this token can currently be used for verification.
    */
   public boolean isUsable() {
-    return tokenStatus == TokenStatus.ACTIVE
-        && !isExpiredByTime()
-        && !isAttemptsExceeded();
+    return tokenStatus == TokenStatus.ACTIVE && !isExpiredByTime() && !isAttemptsExceeded();
   }
 
   /**
    * Whether enough time has passed since issuance to allow requesting a new code.
    */
   public boolean isResendAllowed() {
-    return !Instant.now()
-        .isBefore(createdAt.plusSeconds(RESEND_COOLDOWN_SECONDS));
+    return !Instant.now().isBefore(createdAt.plusSeconds(RESEND_COOLDOWN_SECONDS));
   }
 }

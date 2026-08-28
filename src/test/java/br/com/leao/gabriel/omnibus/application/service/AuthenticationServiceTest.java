@@ -20,8 +20,8 @@ import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.StaffRepositoryPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.TokenIssuerPort;
-import java.time.LocalDate;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,23 +38,17 @@ class AuthenticationServiceTest {
   private static final String PASSWORD_HASH = "hashed-password";
   private static final String ISSUED_TOKEN = "signed.jwt.token";
 
-  @Mock
-  private CustomerRepositoryPort customerRepository;
+  @Mock private CustomerRepositoryPort customerRepository;
 
-  @Mock
-  private StaffRepositoryPort staffRepository;
+  @Mock private StaffRepositoryPort staffRepository;
 
-  @Mock
-  private PasswordEncoderPort passwordEncoder;
+  @Mock private PasswordEncoderPort passwordEncoder;
 
-  @Mock
-  private TokenIssuerPort tokenIssuer;
+  @Mock private TokenIssuerPort tokenIssuer;
 
-  @Mock
-  private AuthenticatedPrincipalFactory authenticatedPrincipalFactory;
+  @Mock private AuthenticatedPrincipalFactory authenticatedPrincipalFactory;
 
-  @Mock
-  private AuthenticatedPrincipal principal;
+  @Mock private AuthenticatedPrincipal principal;
 
   private AuthenticationService service;
 
@@ -62,7 +56,10 @@ class AuthenticationServiceTest {
   void setUp() {
     service =
         new AuthenticationService(
-            customerRepository, staffRepository, passwordEncoder, tokenIssuer,
+            customerRepository,
+            staffRepository,
+            passwordEncoder,
+            tokenIssuer,
             authenticatedPrincipalFactory);
   }
 

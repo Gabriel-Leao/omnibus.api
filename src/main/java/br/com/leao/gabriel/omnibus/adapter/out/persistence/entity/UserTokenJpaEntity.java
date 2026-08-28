@@ -67,6 +67,9 @@ public class UserTokenJpaEntity {
   @Column(name = "revoked_at")
   private Instant revokedAt;
 
+  /**
+   * Initialises persistence timestamps when a token is first created.
+   */
   @PrePersist
   protected void onCreate() {
     createdAt = Instant.now();

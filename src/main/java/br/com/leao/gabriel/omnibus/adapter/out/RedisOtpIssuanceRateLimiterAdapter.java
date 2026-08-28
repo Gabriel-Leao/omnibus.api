@@ -24,6 +24,15 @@ public class RedisOtpIssuanceRateLimiterAdapter implements OtpIssuanceRateLimite
     this.redisTemplate = redisTemplate;
   }
 
+  /**
+   * Increments the OTP issuance counter for a user and token type.
+   *
+   * @param userId the account requesting the OTP
+   *
+   * @param type the type of OTP being issued
+   *
+   * @return the updated issuance count
+   */
   @Override
   public long incrementAndGet(String userId, OtpType type) {
     String key = "otp-rate-limit:%s:%s".formatted(userId, type.name());

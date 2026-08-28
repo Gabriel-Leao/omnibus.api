@@ -14,7 +14,9 @@ public class EnumValueValidator implements ConstraintValidator<EnumValue, String
   private String allowedValues;
 
   /**
-   * Initializes the validator with the enum type configured by the constraint.
+   * Initialises the validator with the enum type configured by the constraint.
+   *
+   * @param constraintAnnotation the validation constraint configuration
    */
   @Override
   public void initialize(EnumValue constraintAnnotation) {

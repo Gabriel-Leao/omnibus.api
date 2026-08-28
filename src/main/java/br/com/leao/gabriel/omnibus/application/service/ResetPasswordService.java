@@ -1,6 +1,7 @@
 package br.com.leao.gabriel.omnibus.application.service;
 
 import br.com.leao.gabriel.omnibus.application.usecase.ResetPasswordUseCase;
+import br.com.leao.gabriel.omnibus.domain.exception.CustomerNotFoundException;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles password reset operations after a valid reset token has been verified.
+ */
 @Service
 @RequiredArgsConstructor
 public class ResetPasswordService implements ResetPasswordUseCase {
@@ -16,8 +20,10 @@ public class ResetPasswordService implements ResetPasswordUseCase {
   private final PasswordEncoder passwordEncoder;
 
   /**
-   * @param userId
-   * @param newPassword
+   * Changes the customer password after a valid password reset request.
+   *
+   * @param userId the customer's identifier
+   * @param newPassword the new plain-text password
    */
   @Override
   @Transactional
@@ -25,12 +31,10 @@ public class ResetPasswordService implements ResetPasswordUseCase {
     var customer =
         customerRepository
             .findById(userId)
-            .orElseThrow(/* exceção */);
+            .orElseThrow(() -> new CustomerNotFoundException(userId));
 
-    var passwordHash =
-        passwordEncoder.encode(newPassword);
+    var passwordHash = passwordEncoder.encode(newPassword);
 
-    customerRepository.save(
-        customer.changePassword(passwordHash));
+    customerRepository.save(customer.changePassword(passwordHash));
   }
 }

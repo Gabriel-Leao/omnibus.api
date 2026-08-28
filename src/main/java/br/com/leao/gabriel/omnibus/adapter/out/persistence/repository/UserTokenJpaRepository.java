@@ -23,7 +23,7 @@ public interface UserTokenJpaRepository extends JpaRepository<UserTokenJpaEntity
    * Finds the currently active token for a user, taking a pessimistic write lock on the row.
    *
    * <p>The lock forces concurrent issuance requests for the same user (e.g. a double-submitted
-   * resend) to serialize instead of racing to revoke/insert around the
+   * resend) to serialise instead of racing to revoke/insert around the
    * {@code ux_user_token_one_active} partial unique index.
    */
   @Lock(LockModeType.PESSIMISTIC_WRITE)

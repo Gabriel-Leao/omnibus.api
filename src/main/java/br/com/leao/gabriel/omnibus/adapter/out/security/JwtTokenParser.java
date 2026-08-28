@@ -19,6 +19,9 @@ public class JwtTokenParser {
 
   private final SecretKey signingKey;
 
+  /**
+   * Creates a JWT token parser using the configured signing secret.
+   */
   public JwtTokenParser(@Value("${jwt.secret}") String secret) {
     this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
   }
@@ -26,18 +29,21 @@ public class JwtTokenParser {
   /**
    * Parses the token and returns its claims.
    *
+   * @param token the JWT to parse
+   *
    * @throws JwtException if the token is invalid, malformed, or expired
    */
   public Claims parseClaims(String token) {
     return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
   }
 
-
   /**
    * Extracts the token purpose from the given claims.
    *
    * @param claims the JWT claims
+   *
    * @return the purpose for which the token was issued
+   *
    * @throws IllegalArgumentException if the purpose is missing or unknown
    */
   public OtpType extractPurpose(Claims claims) {
@@ -49,6 +55,7 @@ public class JwtTokenParser {
    * Extracts the authorities granted by the token from the given claims.
    *
    * @param claims the JWT claims
+   *
    * @return the authorities granted by the token, or an empty list if none are present
    */
   public List<String> extractAuthorities(Claims claims) {
@@ -58,8 +65,6 @@ public class JwtTokenParser {
       return List.of();
     }
 
-    return authorities.stream()
-        .map(Object::toString)
-        .toList();
+    return authorities.stream().map(Object::toString).toList();
   }
 }

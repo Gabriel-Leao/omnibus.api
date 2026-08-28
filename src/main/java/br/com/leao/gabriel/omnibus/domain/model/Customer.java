@@ -95,6 +95,13 @@ public class Customer extends UserAccount {
     return birthDate;
   }
 
+  /**
+   * Checks whether this customer can use an OTP of the supplied type.
+   *
+   * @param otpType the OTP purpose to check
+   *
+   * @return {@code true} when the customer is eligible to use the OTP
+   */
   public boolean canUseOtp(OtpType otpType) {
     return switch (otpType) {
       case ACCOUNT_ACTIVATION -> !isActivated();
@@ -102,6 +109,13 @@ public class Customer extends UserAccount {
     };
   }
 
+  /**
+   * Returns a copy of this customer with a new password hash.
+   *
+   * @param passwordHash the new password hash
+   *
+   * @return the customer with the updated password
+   */
   public Customer changePassword(String passwordHash) {
     Objects.requireNonNull(passwordHash, "Password hash must not be null");
 
@@ -115,8 +129,7 @@ public class Customer extends UserAccount {
         getUpdatedAt(),
         getDeletedAt(),
         birthDate,
-        photoUrl
-    );
+        photoUrl);
   }
 
   /**
@@ -153,6 +166,11 @@ public class Customer extends UserAccount {
         photoUrl);
   }
 
+  /**
+   * Returns whether this customer account is active.
+   *
+   * @return {@code true} when the account is active
+   */
   public boolean isActivated() {
     return UserStatus.ACTIVE.equals(getStatus());
   }

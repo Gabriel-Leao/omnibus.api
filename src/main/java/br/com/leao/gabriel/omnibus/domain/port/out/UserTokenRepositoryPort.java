@@ -9,6 +9,13 @@ import java.util.Optional;
  */
 public interface UserTokenRepositoryPort {
 
+  /**
+   * Saves a user token.
+   *
+   * @param token the token to persist
+   *
+   * @return the persisted token
+   */
   UserToken save(UserToken token);
 
   /**
@@ -16,9 +23,24 @@ public interface UserTokenRepositoryPort {
    */
   Optional<UserToken> findLatestByUserIdAndType(String userId, OtpType type);
 
+  /**
+   * Deletes a user token by its identifier.
+   *
+   * @param id the token identifier
+   */
   void deleteById(Long id);
 
+  /**
+   * Flushes pending token persistence operations.
+   */
   void flush();
 
+  /**
+   * Finds the active token for a user.
+   *
+   * @param userId the user's identifier
+   *
+   * @return the active token, if one exists
+   */
   Optional<UserToken> findActiveByUserId(String userId);
 }

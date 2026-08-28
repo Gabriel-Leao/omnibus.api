@@ -7,7 +7,7 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
- * Builds {@link AuthenticatedPrincipal} instances from domain accounts, centralizing how each
+ * Builds {@link AuthenticatedPrincipal} instances from domain accounts, centralising how each
  * account type maps to its authorities so this logic is not duplicated across services that issue
  * tokens (login, account activation, etc.).
  */
@@ -16,6 +16,10 @@ public class AuthenticatedPrincipalFactory {
 
   /**
    * Builds the principal representing an authenticated {@link Customer}.
+   *
+   * @param customer the customer account
+   *
+   * @return the corresponding authenticated principal
    */
   public AuthenticatedPrincipal forCustomer(Customer customer) {
     return new AuthenticatedPrincipal(
@@ -24,6 +28,10 @@ public class AuthenticatedPrincipalFactory {
 
   /**
    * Builds the principal representing an authenticated {@link Staff} member.
+   *
+   * @param staff the staff account
+   *
+   * @return the corresponding authenticated principal
    */
   public AuthenticatedPrincipal forStaff(Staff staff) {
     String authority = "ROLE_" + staff.getRole().name();

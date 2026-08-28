@@ -11,6 +11,9 @@ import br.com.leao.gabriel.omnibus.domain.port.out.UserTokenRepositoryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * Verifies OTP codes and marks valid tokens as used.
+ */
 @Service
 @RequiredArgsConstructor
 public class OtpVerifier {
@@ -19,16 +22,13 @@ public class OtpVerifier {
   private final UserTokenRepositoryPort userTokenRepository;
   private final OtpGeneratorPort otpGenerator;
 
-  public Customer verify(
-      String email,
-      String submittedCode,
-      OtpType otpType
-  ) {
+  /**
+   * Handles the verify operation.
+   */
+  public Customer verify(String email, String submittedCode, OtpType otpType) {
 
     Customer customer =
-        customerRepository
-            .findByEmail(email)
-            .orElseThrow(InvalidVerificationCodeException::new);
+        customerRepository.findByEmail(email).orElseThrow(InvalidVerificationCodeException::new);
 
     if (!customer.canUseOtp(otpType)) {
       throw new InvalidVerificationCodeException();
@@ -45,9 +45,7 @@ public class OtpVerifier {
           : new InvalidVerificationCodeException();
     }
 
-    boolean matches =
-        otpGenerator.hash(submittedCode)
-            .equals(token.getCodeHash());
+    boolean matches = otpGenerator.hash(submittedCode).equals(token.getCodeHash());
 
     if (!matches) {
       var updatedToken = token.registerFailedAttempt();

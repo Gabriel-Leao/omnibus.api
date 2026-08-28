@@ -12,7 +12,9 @@ public interface OtpIssuanceRateLimiterPort {
    * Increments the issuance counter for the given user/type and returns the new count.
    *
    * @param userId the account requesting a new code
+   *
    * @param type   the type of token being issued
+   *
    * @return the count after this increment
    */
   long incrementAndGet(String userId, OtpType type);

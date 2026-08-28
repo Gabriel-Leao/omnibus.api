@@ -15,6 +15,11 @@ public class Sha256OtpGeneratorAdapter implements OtpGeneratorPort {
   private static final int CODE_LENGTH = 6;
   private final SecureRandom random = new SecureRandom();
 
+  /**
+   * Generates a cryptographically secure six-digit numeric OTP.
+   *
+   * @return the generated OTP
+   */
   @Override
   public String generateCode() {
     int bound = (int) Math.pow(10, CODE_LENGTH);
@@ -22,6 +27,13 @@ public class Sha256OtpGeneratorAdapter implements OtpGeneratorPort {
     return String.format("%0" + CODE_LENGTH + "d", code);
   }
 
+  /**
+   * Hashes an OTP using SHA-256.
+   *
+   * @param code the OTP to hash
+   *
+   * @return the hexadecimal SHA-256 hash
+   */
   @Override
   public String hash(String code) {
     try {

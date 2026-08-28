@@ -10,32 +10,35 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles customer account activation and access token issuance.
+ */
 @Service
 @RequiredArgsConstructor
-public class ActivateAccountService
-    implements ActivateAccountUseCase {
+public class ActivateAccountService implements ActivateAccountUseCase {
 
   private final OtpVerifier otpVerifier;
   private final CustomerRepositoryPort customerRepository;
   private final TokenIssuerPort tokenIssuer;
   private final AuthenticatedPrincipalFactory principalFactory;
 
+  /**
+   * Activates a customer account and issues an access token.
+   *
+   * @param email the customer's email address
+   *
+   * @param code the submitted activation code
+   *
+   * @return a signed access token
+   */
   @Override
   @Transactional(noRollbackFor = InvalidVerificationCodeException.class)
   public String execute(String email, String code) {
 
-    var customer =
-        otpVerifier.verify(
-            email,
-            code,
-            OtpType.ACCOUNT_ACTIVATION
-        );
+    var customer = otpVerifier.verify(email, code, OtpType.ACCOUNT_ACTIVATION);
 
-    var activatedCustomer =
-        customerRepository.save(customer.activate());
+    var activatedCustomer = customerRepository.save(customer.activate());
 
-    return tokenIssuer.issueAccessToken(
-        principalFactory.forCustomer(activatedCustomer)
-    );
+    return tokenIssuer.issueAccessToken(principalFactory.forCustomer(activatedCustomer));
   }
 }

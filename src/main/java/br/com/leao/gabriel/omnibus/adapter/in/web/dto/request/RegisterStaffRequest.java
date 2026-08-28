@@ -13,6 +13,22 @@ import java.time.LocalDate;
 
 /**
  * Represents and validates the data required to register a staff member.
+ *
+ * @param name the name
+ *
+ * @param email the email
+ *
+ * @param password the password
+ *
+ * @param confirmPassword the confirmPassword
+ *
+ * @param role the role
+ *
+ * @param employeeCode the employeeCode
+ *
+ * @param department the department
+ *
+ * @param hiredAt the hiredAt
  */
 @PasswordMatches
 public record RegisterStaffRequest(

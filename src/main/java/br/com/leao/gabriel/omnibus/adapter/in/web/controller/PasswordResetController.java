@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * REST controller for password reset operations.
+ */
 @RestController
 @RequestMapping("/password-reset")
 @RequiredArgsConstructor
@@ -30,9 +33,11 @@ public class PasswordResetController {
   private final ResetPasswordUseCase resetPasswordUseCase;
 
   /**
-   * Requests a password reset OTP to be sent to the given email address. * * <p>The response does
-   * not reveal whether an account is associated with the given email address. * * @param request
-   * the request containing the email address associated with the account
+   * Requests a password reset OTP to be sent to the given email address.
+   *
+   * <p>The response does not reveal whether an account is associated with the given email address.
+   *
+   * @param request the request containing the email address associated with the account
    */
   @PostMapping()
   public ResponseEntity<RegistrationResponse> requestPasswordReset(
@@ -45,16 +50,14 @@ public class PasswordResetController {
    * Verifies the password reset OTP and issues a short-lived password reset token.
    *
    * @param request the password reset verification request containing the email and OTP
+   *
    * @return a short-lived token authorising the password reset
    */
   @PostMapping("/verify")
   public ResponseEntity<PasswordResetTokenResponse> verifyPasswordResetOtp(
       @Valid @RequestBody VerifyCodeRequest request) {
 
-    String resetToken = verifyPasswordResetOtpUseCase.execute(
-        request.email(),
-        request.code()
-    );
+    String resetToken = verifyPasswordResetOtpUseCase.execute(request.email(), request.code());
 
     return ResponseEntity.ok(new PasswordResetTokenResponse(resetToken));
   }
@@ -66,17 +69,14 @@ public class PasswordResetController {
    * verifying the password reset code.
    *
    * @param userId  the ID of the user represented by the password reset token
+   *
    * @param request the request containing the new password
    */
   @PostMapping("/confirm")
   public ResponseEntity<Void> resetPassword(
-      @AuthenticationPrincipal String userId,
-      @Valid @RequestBody ResetPasswordRequest request) {
+      @AuthenticationPrincipal String userId, @Valid @RequestBody ResetPasswordRequest request) {
 
-    resetPasswordUseCase.execute(
-        UUID.fromString(userId),
-        request.password()
-    );
+    resetPasswordUseCase.execute(UUID.fromString(userId), request.password());
 
     return ResponseEntity.noContent().build();
   }

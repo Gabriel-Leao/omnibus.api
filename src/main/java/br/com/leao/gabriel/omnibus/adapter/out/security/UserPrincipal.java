@@ -47,36 +47,71 @@ public final class UserPrincipal implements UserDetails {
     return new UserPrincipal(id, email, passwordHash, status, "ROLE_" + staffRole);
   }
 
+  /**
+   * Returns the authorities granted to the authenticated account.
+   *
+   * @return the granted authorities
+   */
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
     return authorities;
   }
 
+  /**
+   * Returns the password hash associated with the account.
+   *
+   * @return the password hash
+   */
   @Override
   public String getPassword() {
     return passwordHash;
   }
 
+  /**
+   * Returns the account email used as the username.
+   *
+   * @return the account email
+   */
   @Override
   public String getUsername() {
     return email;
   }
 
+  /**
+   * Indicates whether the account is not locked.
+   *
+   * @return {@code true} because account locking is not modelled here
+   */
   @Override
   public boolean isAccountNonLocked() {
     return status != UserStatus.SUSPENDED && status != UserStatus.BANNED;
   }
 
+  /**
+   * Indicates whether the account is enabled.
+   *
+   * @return {@code true} because enabled state is handled by the domain authentication flow
+   */
   @Override
   public boolean isEnabled() {
     return status == UserStatus.ACTIVE;
   }
 
+  /**
+   * Indicates whether the account has not expired.
+   *
+   * @return {@code true} because account expiration is not modelled here
+   */
   @Override
   public boolean isAccountNonExpired() {
     return true;
   }
 
+  /**
+   * Indicates whether the credentials have not expired.
+   *
+   * @return {@code true} because credential expiration is not modelled here
+   */
   @Override
   public boolean isCredentialsNonExpired() {
     return true;

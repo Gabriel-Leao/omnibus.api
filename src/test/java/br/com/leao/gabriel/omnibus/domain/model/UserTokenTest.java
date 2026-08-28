@@ -18,8 +18,7 @@ class UserTokenTest {
   void shouldCreateActiveToken() {
     Instant expiresAt = Instant.now().plusSeconds(900);
 
-    UserToken token =
-        UserToken.issue(USER_ID, CODE_HASH, OtpType.ACCOUNT_ACTIVATION, expiresAt);
+    UserToken token = UserToken.issue(USER_ID, CODE_HASH, OtpType.ACCOUNT_ACTIVATION, expiresAt);
 
     assertThat(token.getUserId()).isEqualTo(USER_ID);
     assertThat(token.getCodeHash()).isEqualTo(CODE_HASH);
@@ -36,10 +35,7 @@ class UserTokenTest {
         IllegalArgumentException.class,
         () ->
             UserToken.issue(
-                USER_ID,
-                CODE_HASH,
-                OtpType.EMAIL_CHANGE,
-                Instant.now().plusSeconds(900)));
+                USER_ID, CODE_HASH, OtpType.EMAIL_CHANGE, Instant.now().plusSeconds(900)));
   }
 
   @Test
@@ -47,10 +43,7 @@ class UserTokenTest {
   void shouldRevokeTokenAtMaximumAttempts() {
     UserToken token =
         UserToken.issue(
-            USER_ID,
-            CODE_HASH,
-            OtpType.ACCOUNT_ACTIVATION,
-            Instant.now().plusSeconds(900));
+            USER_ID, CODE_HASH, OtpType.ACCOUNT_ACTIVATION, Instant.now().plusSeconds(900));
 
     UserToken firstFailure = token.registerFailedAttempt();
     UserToken secondFailure = firstFailure.registerFailedAttempt();
@@ -70,10 +63,7 @@ class UserTokenTest {
   void shouldRejectFailedAttemptAfterRevocation() {
     UserToken token =
         UserToken.issue(
-            USER_ID,
-            CODE_HASH,
-            OtpType.ACCOUNT_ACTIVATION,
-            Instant.now().plusSeconds(900));
+            USER_ID, CODE_HASH, OtpType.ACCOUNT_ACTIVATION, Instant.now().plusSeconds(900));
 
     UserToken revoked =
         token.registerFailedAttempt().registerFailedAttempt().registerFailedAttempt();
@@ -86,10 +76,7 @@ class UserTokenTest {
   void shouldNotConsiderExpiredTokenUsable() {
     UserToken token =
         UserToken.issue(
-            USER_ID,
-            CODE_HASH,
-            OtpType.ACCOUNT_ACTIVATION,
-            Instant.now().minusSeconds(1));
+            USER_ID, CODE_HASH, OtpType.ACCOUNT_ACTIVATION, Instant.now().minusSeconds(1));
 
     assertThat(token.isExpired()).isTrue();
     assertThat(token.isUsable()).isFalse();
@@ -100,10 +87,7 @@ class UserTokenTest {
   void shouldMarkTokenAsUsed() {
     UserToken token =
         UserToken.issue(
-            USER_ID,
-            CODE_HASH,
-            OtpType.ACCOUNT_ACTIVATION,
-            Instant.now().plusSeconds(900));
+            USER_ID, CODE_HASH, OtpType.ACCOUNT_ACTIVATION, Instant.now().plusSeconds(900));
 
     UserToken used = token.markUsed();
 
@@ -117,10 +101,7 @@ class UserTokenTest {
   void shouldCreateEmailChangeToken() {
     UserToken token =
         UserToken.issueForEmailChange(
-            USER_ID,
-            CODE_HASH,
-            "new@example.com",
-            Instant.now().plusSeconds(900));
+            USER_ID, CODE_HASH, "new@example.com", Instant.now().plusSeconds(900));
 
     assertThat(token.getType()).isEqualTo(OtpType.EMAIL_CHANGE);
     assertThat(token.getTargetEmail()).isEqualTo("new@example.com");

@@ -20,6 +20,9 @@ public abstract class UserAccount {
   private final Instant updatedAt;
   private final Instant deletedAt;
 
+  /**
+   * Handles the UserAccount operation.
+   */
   protected UserAccount(
       String id,
       String name,
@@ -41,8 +44,7 @@ public abstract class UserAccount {
     this.deletedAt = validateDeletedAtConsistency(status, deletedAt);
   }
 
-  private static Instant validateDeletedAtConsistency(
-      UserStatus status, Instant deletedAt) {
+  private static Instant validateDeletedAtConsistency(UserStatus status, Instant deletedAt) {
     boolean isPendingDeletion = status == UserStatus.PENDING_DELETION;
     if (isPendingDeletion == (deletedAt == null)) {
       throw new IllegalStateException(

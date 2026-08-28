@@ -5,8 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 
 /**
  * Request payload containing an email address.
+ *
+ * @param email the email address
  */
-public record EmailRequest(
-    @NotBlank @Email String email) {
-
-}
+public record EmailRequest(@NotBlank @Email String email) {}

@@ -67,15 +67,9 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth ->
-                auth
-                    .requestMatchers(
-                        HttpMethod.POST,
-                        "/password-reset/confirm")
+                auth.requestMatchers(HttpMethod.POST, "/password-reset/confirm")
                     .hasAuthority("PASSWORD_RESET")
-                    .requestMatchers(
-                        HttpMethod.POST,
-                        "/password-reset",
-                        "/password-reset/verify")
+                    .requestMatchers(HttpMethod.POST, "/password-reset", "/password-reset/verify")
                     .permitAll()
                     .requestMatchers("/auth/**")
                     .permitAll()

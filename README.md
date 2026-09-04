@@ -41,6 +41,34 @@ pendente (veja o [Roadmap](#-roadmap)).
 
 ---
 
+## 📖 Documentação da API (OpenAPI / Swagger UI)
+
+Com a aplicação em execução, a documentação interativa está disponível em:
+
+| Recurso | URL |
+|---|---|
+| Swagger UI | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) |
+| Especificação OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
+| Especificação OpenAPI (YAML) | [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml) |
+
+A especificação documenta os endpoints disponíveis, os DTOs de requisição e resposta, exemplos de
+payloads, regras de validação e o formato padronizado de erros. Os endpoints protegidos declaram o
+esquema `bearerAuth` (JWT) e exibem o ícone de cadeado na UI.
+
+Para testar uma rota protegida no Swagger UI:
+
+1. Execute `POST /auth/login` e copie o campo `accessToken` da resposta.
+2. Clique em **Authorize**.
+3. Informe o token JWT no esquema `bearerAuth`.
+4. Execute a rota protegida. O Swagger UI enviará automaticamente o cabeçalho
+   `Authorization: Bearer <token>`.
+
+O endpoint `POST /password-reset/confirm` requer o token temporário retornado por
+`POST /password-reset/verify`. Esse token possui a authority `PASSWORD_RESET`; um access token
+comum não é aceito para confirmar uma nova senha.
+
+---
+
 ## 🏛️ Arquitetura: Hexagonal (Ports & Adapters)
 
 O projeto adota **Arquitetura Hexagonal** em vez do tradicional MVC em camadas. A ideia central: o

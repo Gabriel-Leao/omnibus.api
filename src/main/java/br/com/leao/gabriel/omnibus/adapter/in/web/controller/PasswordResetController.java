@@ -9,6 +9,11 @@ import br.com.leao.gabriel.omnibus.application.usecase.ResetPasswordUseCase;
 import br.com.leao.gabriel.omnibus.application.usecase.SendOtpUseCase;
 import br.com.leao.gabriel.omnibus.application.usecase.VerifyPasswordResetUseCase;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/password-reset")
 @RequiredArgsConstructor
+@Tag(name = "Password reset", description = "Password reset flow using OTP")
 public class PasswordResetController {
 
   private final SendOtpUseCase sendOtpUseCase;
@@ -40,6 +46,10 @@ public class PasswordResetController {
    * @param request the request containing the email address associated with the account
    */
   @PostMapping()
+  @Operation(
+      summary = "Requests a password reset",
+      description = "Sends an OTP to the email address.")
+  @ApiResponse(responseCode = "202", description = "Password reset request accepted")
   public ResponseEntity<RegistrationResponse> requestPasswordReset(
       @Valid @RequestBody EmailRequest request) {
     sendOtpUseCase.execute(request.email(), OtpType.PASSWORD_RESET);
@@ -50,10 +60,16 @@ public class PasswordResetController {
    * Verifies the password reset OTP and issues a short-lived password reset token.
    *
    * @param request the password reset verification request containing the email and OTP
-   *
    * @return a short-lived token authorising the password reset
    */
   @PostMapping("/verify")
+  @Operation(
+      summary = "Validates the password reset code",
+      description = "Returns a temporary token to confirm the new password.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "Code validated successfully"),
+    @ApiResponse(responseCode = "400", description = "Invalid or expired code")
+  })
   public ResponseEntity<PasswordResetTokenResponse> verifyPasswordResetOtp(
       @Valid @RequestBody VerifyCodeRequest request) {
 
@@ -69,10 +85,15 @@ public class PasswordResetController {
    * verifying the password reset code.
    *
    * @param userId  the ID of the user represented by the password reset token
-   *
    * @param request the request containing the new password
    */
   @PostMapping("/confirm")
+  @Operation(summary = "Confirms the new password")
+  @SecurityRequirement(name = "bearerAuth")
+  @ApiResponses({
+    @ApiResponse(responseCode = "204", description = "Password redefinida com sucesso"),
+    @ApiResponse(responseCode = "401", description = "Password reset token inválido ou expirado")
+  })
   public ResponseEntity<Void> resetPassword(
       @AuthenticationPrincipal String userId, @Valid @RequestBody ResetPasswordRequest request) {
 

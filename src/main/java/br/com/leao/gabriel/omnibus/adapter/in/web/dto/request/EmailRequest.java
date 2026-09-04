@@ -1,5 +1,6 @@
 package br.com.leao.gabriel.omnibus.adapter.in.web.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -8,4 +9,7 @@ import jakarta.validation.constraints.NotBlank;
  *
  * @param email the email address
  */
-public record EmailRequest(@NotBlank @Email String email) {}
+@Schema(description = "Request containing an email address")
+public record EmailRequest(
+    @Schema(description = "Account Email address", example = "user@example.com") @NotBlank @Email
+        String email) {}

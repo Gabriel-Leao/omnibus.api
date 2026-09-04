@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Classe principal de inicialização da aplicação Omnibus API.
+ * Main class used to initialise the application
  */
 @SpringBootApplication
 public class OmnibusApplication {

@@ -1,0 +1,59 @@
+name: CI/CD - omnibus.api
+
+'on':
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  verify:
+    name: "✅ Testes e qualidade de código"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Rodar testes automatizados
+        run: ./mvnw test
+
+      - name: Verificar formatação (Spotless)
+        run: ./mvnw spotless:check
+
+      - name: Verificar estilo de código (Checkstyle)
+        run: ./mvnw checkstyle:check
+
+  deploy:
+    name: "🚀 Deploy para o Azure App Service"
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Empacotar a aplicação (gera target/app.jar)
+        run: ./mvnw clean package -DskipTests
+
+      - name: Publicar no Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: target/app.jar

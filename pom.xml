@@ -6,6 +6,7 @@
   <artifactId>omnibus</artifactId>
 
   <build>
+    <finalName>app</finalName>
     <plugins>
 
       <!-- Spring Boot -->
@@ -165,7 +166,6 @@
 
     </plugins>
   </build>
-
   <dependencies>
 
     <!-- MapStruct -->
@@ -326,6 +326,7 @@
     </dependency>
 
   </dependencies>
+
   <description>Omnibus API</description>
   <groupId>br.com.leao.gabriel</groupId>
 

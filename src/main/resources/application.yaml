@@ -7,6 +7,7 @@ spring:
     port: ${MAIL_PORT:2525}
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
+    from: ${MAIL_USERNAME}
     properties:
       mail:
         smtp:
@@ -30,9 +31,6 @@ jwt:
   secret: ${JWT_SECRET:change-this-to-a-long-random-secret-in-production-please}
   access-token-expiration-minutes: ${JWT_ACESS_TOKEN_EXPIRATION_MINUTES:60}
   password-reset-expiration-minutes: ${JWT_RESET_PASSWORD_EXPIRATION_MINUTES:5}
-
-email:
-  sender-address: ${EMAIL_SENDER_ADDRESS}
 
 logging:
   file:

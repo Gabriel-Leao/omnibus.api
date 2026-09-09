@@ -31,7 +31,7 @@ public class SmtpOtpSenderAdapter implements OtpSenderPort {
 
   private final JavaMailSender mailSender;
 
-  @Value("${email.sender-address}")
+  @Value("${spring.mail.from}")
   private String senderAddress;
 
   /**

@@ -6,6 +6,7 @@ import br.com.leao.gabriel.omnibus.domain.exception.InvalidVerificationCodeExcep
 import br.com.leao.gabriel.omnibus.domain.exception.VerificationAttemptsExceededException;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.TokenIssuerPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class ActivateAccountService implements ActivateAccountUseCase {
   private final CustomerRepositoryPort customerRepository;
   private final TokenIssuerPort tokenIssuer;
   private final AuthenticatedPrincipalFactory principalFactory;
+  private final EmailSenderPort emailSender;
 
   /**
    * Activates a customer account and issues an access token.
@@ -39,8 +41,8 @@ public class ActivateAccountService implements ActivateAccountUseCase {
   public String execute(String email, String code) {
 
     var customer = otpVerifier.verify(email, code, OtpType.ACCOUNT_ACTIVATION);
-
     var activatedCustomer = customerRepository.save(customer.activate());
+    emailSender.sendRegistrationConfirmation(activatedCustomer);
 
     return tokenIssuer.issueAccessToken(principalFactory.forCustomer(activatedCustomer));
   }

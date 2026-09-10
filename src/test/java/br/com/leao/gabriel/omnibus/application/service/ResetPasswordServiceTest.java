@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import br.com.leao.gabriel.omnibus.domain.exception.CustomerNotFoundException;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
-import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,7 @@ class ResetPasswordServiceTest {
 
   @Mock private CustomerRepositoryPort customerRepository;
   @Mock private PasswordEncoder passwordEncoder;
-  @Mock private OtpSenderPort otpSender;
+  @Mock private EmailSenderPort otpSender;
   @Mock private Customer customer;
   @Mock private Customer updatedCustomer;
 

@@ -272,9 +272,21 @@
       <version>0.13.0</version>
     </dependency>
 
+    <!-- thymeleaf -->
+    <dependency>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+      <groupId>org.springframework.boot</groupId>
+    </dependency>
+
+
     <!-- ===================================================== -->
     <!-- TESTES                                                -->
     <!-- ===================================================== -->
+    <dependency>
+      <artifactId>spring-boot-starter-thymeleaf-test</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <artifactId>spring-boot-starter-data-jpa-test</artifactId>

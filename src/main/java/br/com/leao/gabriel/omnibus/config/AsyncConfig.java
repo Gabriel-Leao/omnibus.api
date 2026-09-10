@@ -9,10 +9,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 /**
  * Enables asynchronous method execution and provides the thread pool used for it.
  *
- * <p>This exists primarily so that email delivery (see {@code SmtpOtpSenderAdapter}) never runs
- * on the HTTP request thread. Several endpoints are deliberately designed to return the same
- * response regardless of whether an email is registered, to avoid leaking account existence (e.g.
- * {@code POST /password-reset}, {@code POST /auth/resend-activation}). If the email were sent
+ * <p>This exists primarily so that email delivery (see {@code SmtpEmailSenderAdapter})
+ * never runs on the HTTP request thread. Several endpoints are deliberately designed to return the
+ * same response regardless of whether an email is registered, to avoid leaking account existence
+ * (e.g. {@code POST /password-reset}, {@code POST /auth/resend-activation}). If the email were sent
  * synchronously, the branch that actually sends an email would take measurably longer than the
  * branch that returns early — an attacker could infer whether an email exists purely from response
  * time, even though the response body is identical either way. Running the send asynchronously

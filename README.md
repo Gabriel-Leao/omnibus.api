@@ -1,4 +1,4 @@
-# 📚 Omnibus API
+# Omnibus API
 
 API RESTful de e-commerce de quadrinhos (HQs), construída com foco em arquitetura de mercado, boas
 práticas de engenharia de software e um pipeline de qualidade de código reproduzível.
@@ -8,18 +8,18 @@ práticas de engenharia de software e um pipeline de qualidade de código reprod
 
 ---
 
-## 🚧 Status atual do projeto
+## Status atual do projeto
 
 Este projeto está em desenvolvimento incremental, documentado publicamente como parte do meu
 processo de aprendizado. A fundação (modelagem de dados, migrations, configuração de ambiente, CI,
 arquitetura hexagonal e pipeline de qualidade) está pronta. O fluxo de **registro e autenticação de
-`Customer`** está completo e testado de ponta a ponta (domínio, persistência, validação, JWT e
-testes unitários); o fluxo equivalente de `Staff` (criação restrita a administradores) ainda está
-pendente (veja o [Roadmap](#-roadmap)).
+`Customer`** está completo e testado de ponta a ponta (domínio, persistência, validação, JWT,
+notificações por e-mail e testes unitários); o fluxo equivalente de `Staff` (criação restrita a
+administradores) ainda está pendente (veja o [Roadmap](#roadmap)).
 
 ---
 
-## 🚀 Stack Tecnológica
+## Stack Tecnológica
 
 | Categoria               | Tecnologia                                                          |
 |-------------------------|---------------------------------------------------------------------|
@@ -30,7 +30,7 @@ pendente (veja o [Roadmap](#-roadmap)).
 | Cache / Rate limiting   | Redis 7 (via Docker Compose)                                        |
 | Migrations              | Flyway                                                              |
 | Segurança               | Spring Security + JWT (JJWT)                                        |
-| E-mail                  | Spring Mail (Mailtrap em dev)                                       |
+| E-mail                  | Spring Mail + Thymeleaf (templates HTML), Mailtrap em dev           |
 | Documentação de API     | SpringDoc OpenAPI (Swagger UI)                                      |
 | Mapeamento DTO ↔ Entity | MapStruct                                                           |
 | Boilerplate             | Lombok                                                              |
@@ -41,14 +41,14 @@ pendente (veja o [Roadmap](#-roadmap)).
 
 ---
 
-## 📖 Documentação da API (OpenAPI / Swagger UI)
+## Documentação da API (OpenAPI / Swagger UI)
 
 Com a aplicação em execução, a documentação interativa está disponível em:
 
-| Recurso | URL |
-|---|---|
-| Swagger UI | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) |
-| Especificação OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
+| Recurso                      | URL                                                                              |
+|------------------------------|----------------------------------------------------------------------------------|
+| Swagger UI                   | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)   |
+| Especificação OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)           |
 | Especificação OpenAPI (YAML) | [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml) |
 
 A especificação documenta os endpoints disponíveis, os DTOs de requisição e resposta, exemplos de
@@ -69,20 +69,20 @@ comum não é aceito para confirmar uma nova senha.
 
 ---
 
-## 🏛️ Arquitetura: Hexagonal (Ports & Adapters)
+## Arquitetura: Hexagonal (Ports & Adapters)
 
 O projeto adota **Arquitetura Hexagonal** em vez do tradicional MVC em camadas. A ideia central: o
 **domínio de negócio fica isolado no núcleo**, sem depender de frameworks (Spring, JPA, HTTP), e se
 comunica com o mundo externo exclusivamente através de **interfaces (portas)**. Bancos de dados,
-REST e segurança são tratados como detalhes de infraestrutura — **adapters** plugáveis nas bordas do
-sistema.
+REST, e-mail e segurança são tratados como detalhes de infraestrutura — **adapters** plugáveis nas
+bordas do sistema.
 
 ### Por que essa escolha
 
 - **Isolamento real de regra de negócio**: o domínio pode ser testado sem subir Spring Context, sem
   banco, sem mocks pesados.
-- **Trocar infraestrutura sem tocar no domínio**: substituir Postgres por outro banco, ou REST por
-  GraphQL, não deveria exigir alterar uma linha de regra de negócio.
+- **Trocar infraestrutura sem tocar no domínio**: substituir Postgres por outro banco, REST por
+  GraphQL, ou o provedor de e-mail, não deveria exigir alterar uma linha de regra de negócio.
 - **Decisão deliberada de aprendizado**: é um padrão mais avançado que camadas tradicionais, com
   trade-offs reais (mais classes, mais mapeamento) — parte do meu processo de evolução técnica.
 
@@ -94,7 +94,7 @@ domínio nunca conhece os adapters.
 ```text
 Adapter IN  →  Application  →  Domain  ←  Application  ←  Adapter OUT
 (Controller,                  (Model +                    (JPA, JWT,
- JWT Filter)                   Portas)                     UserDetails)
+ JWT Filter)                   Portas)                     Email, UserDetails)
 ```
 
 ### Estrutura de pacotes
@@ -106,7 +106,7 @@ src/main/java/br/com/leao/gabriel/omnibus/
 │   ├── exception/                  # Exceções de negócio, sem conhecimento de HTTP
 │   └── port/
 │       ├── in/                     # Interfaces de caso de uso
-│       └── out/                    # Interfaces de infraestrutura (ex: CustomerRepositoryPort)
+│       └── out/                    # Interfaces de infraestrutura (ex: EmailSenderPort)
 │
 ├── application/
 │   └── service/                    # Implementação dos casos de uso (@Service), orquestra o domínio
@@ -124,12 +124,17 @@ src/main/java/br/com/leao/gabriel/omnibus/
 │       │   ├── entity/             # @Entity JPA — separada do modelo de domínio
 │       │   ├── repository/         # Interfaces Spring Data JPA
 │       │   └── *PersistenceAdapter.java   # implementa as portas de saída (@Component)
+│       ├── notification/
+│       │   ├── SmtpEmailSenderAdapter.java  # implementa EmailSenderPort via JavaMailSender
+│       │   └── EmailTemplateRenderer.java   # renderiza os templates Thymeleaf de e-mail
 │       └── security/
 │           ├── UserDetailsServiceImpl.java
 │           └── JwtService.java
 │
 └── config/
-    └── SecurityConfig.java         # Fiação/beans — fora da estrutura hexagonal "pura"
+    ├── SecurityConfig.java         # Fiação/beans — fora da estrutura hexagonal "pura"
+    ├── AsyncConfig.java            # Configuração do executor usado pelos envios @Async
+    └── ThymeleafEmailConfig.java   # Template engine dedicado à renderização de e-mail
 ```
 
 ### Convenção de wiring
@@ -137,7 +142,7 @@ src/main/java/br/com/leao/gabriel/omnibus/
 Implementações de casos de uso e adapters são anotadas diretamente (`@Service`, `@Component`,
 `@Repository`), sem classes de configuração manual (`@Configuration` + `@Bean`) para o wiring de
 casos de uso. `@Configuration` fica reservado para beans genuinamente de infraestrutura
-(`PasswordEncoder`, `SecurityFilterChain`, etc.).
+(`PasswordEncoder`, `SecurityFilterChain`, o `TemplateEngine` do Thymeleaf, etc.).
 
 ### Convenção adotada para peças do Spring Security
 
@@ -151,20 +156,19 @@ explícita de onde morar:
 | `JwtAuthenticationFilter` | Intercepta a requisição HTTP e extrai o token | `adapter/in/web/security/` | Reage a uma requisição chegando — é entrada.                                                       |
 | `SecurityConfig`          | Configuração do `SecurityFilterChain`         | `config/`                  | Fiação de infraestrutura pura; forçar isso em porta/adapter gera mais confusão que clareza.        |
 
-> ⚠️ **Nota temporária**: `/auth/**` e `/password-reset` / `/password-reset/verify` continuam
+> **Nota temporária**: `/auth/**` e `/password-reset` / `/password-reset/verify` continuam
 > liberados (`permitAll`), já que fazem parte do próprio fluxo de autenticação. A exceção é
 > `/password-reset/confirm`, que exige `hasAuthority("PASSWORD_RESET")` — só aceito quando o JWT
 > apresentado é, especificamente, o token de curta duração emitido por
 > `TokenIssuerPort.issuePasswordResetToken` após a verificação do código, não um access token comum.
 > `@PreAuthorize` (com `RoleHierarchy`: `ADMIN` ⊃ `EDITOR` ⊃ `MANAGER` ⊃ `VIEWER`) já está
-> disponível
-> para uso em métodos de service/controller. As demais rotas continuam liberadas
+> disponível para uso em métodos de service/controller. As demais rotas continuam liberadas
 > (`anyRequest().permitAll()`) simplesmente porque os módulos de catálogo e pedidos ainda não
 > existem — a whitelist será restringida rota a rota conforme cada módulo for implementado.
 
 ---
 
-## 👤 Contas de usuário: `Customer` e `Staff`
+## Contas de usuário: `Customer` e `Staff`
 
 Em vez de uma única entidade `User` genérica, o domínio modela dois tipos de conta **estruturalmente
 separados**, sem herança entre si (domínio e DTOs) além de uma base de identidade comum, refletindo
@@ -235,7 +239,7 @@ emissões de OTP concorrentes disputando o índice único de token ativo).
 
 ---
 
-## 🔐 Autenticação (JWT)
+## Autenticação (JWT)
 
 Login e emissão de token seguem a mesma separação de portas/adapters do restante do projeto:
 
@@ -296,14 +300,14 @@ conta, reset de senha e (futuramente) troca de e-mail, todos apoiados na mesma t
   `PASSWORD_RESET`, não um access token normal) através de
   `TokenIssuerPort.issuePasswordResetToken`. Esse token só autoriza `POST /password-reset/confirm` —
   o `JwtAuthenticationFilter` confere que a claim `purpose` do token bate com `PASSWORD_RESET` antes
-  de aceitar essa authority, e o
-  `SecurityConfig` exige `hasAuthority("PASSWORD_RESET")` especificamente nessa rota.
+  de aceitar essa authority, e o `SecurityConfig` exige `hasAuthority("PASSWORD_RESET")`
+  especificamente nessa rota.
 - **`ResetPasswordService`** troca a senha do `Customer` autenticado pelo token de reset,
   reencodando com o `PasswordEncoder` configurado.
 - **`SendOtpService`** unifica o (re)envio de código para os três tipos de OTP: verifica se o
   cliente existe e está no estado certo para o tipo solicitado (`Customer.canUseOtp`/`isEligible`),
   respeita o **cooldown de 60 segundos** entre emissões (`UserToken.isResendAllowed`), delega a
-  emissão ao `VerificationOtpIssuer` e o envio ao `OtpSenderPort`. É o service por trás de
+  emissão ao `VerificationOtpIssuer` e o envio ao `EmailSenderPort`. É o service por trás de
   `POST /auth/resend-activation` e `POST /password-reset`.
 - **`AuthenticatedPrincipalFactory`** centraliza a montagem de `AuthenticatedPrincipal` a partir de
   `Customer` ou `Staff`, reaproveitada tanto por `AuthenticationService` (login) quanto por
@@ -329,7 +333,43 @@ de rate limit — efêmero, sem relação com outras entidades — vive no Redis
 
 ---
 
-## 🗄️ Modelagem de Dados (implementada)
+## Notificações por e-mail
+
+Toda a comunicação por e-mail do fluxo de conta passa por **`EmailSenderPort`** (porta de saída do
+domínio), implementada por **`SmtpEmailSenderAdapter`** via `JavaMailSender`. O domínio e a camada
+de aplicação não sabem que o envio é por SMTP, nem como o corpo do e-mail é montado — apenas chamam
+a porta com os dados necessários.
+
+- **`SmtpEmailSenderAdapter`** (`adapter/out/notification/`) monta a `MimeMessage` e delega a
+  renderização do HTML a `EmailTemplateRenderer`. Todos os métodos são `@Async`: os endpoints que os
+  disparam já responderam ao cliente antes do envio acontecer, garantindo que o tempo de resposta
+  não varie conforme um e-mail é de fato enviado ou não — uma falha no envio é apenas logada, nunca
+  propagada de volta para uma requisição HTTP já concluída.
+- **`EmailTemplateRenderer`** processa os templates Thymeleaf localizados em
+  `src/main/resources/templates/email/`, usando `layout.html` como fragmento base (cabeçalho,
+  rodapé e uma tag de contexto por tipo de e-mail) e um template específico por tipo de mensagem:
+  `otp.html`, `duplicate-registration.html`, `password-reset.html` e
+  `registration-confirmation.html`.
+- **`ThymeleafEmailConfig`** (`config/`) configura um `TemplateEngine`/`ITemplateResolver` dedicado
+  à renderização de e-mail, isolado do resolver padrão do Spring MVC.
+- **`AsyncConfig`** (`config/`) define o executor usado pelos métodos `@Async` de envio.
+
+Tipos de e-mail enviados hoje:
+
+| Método                            | Quando é disparado                                      |
+|-----------------------------------|---------------------------------------------------------|
+| `sendOtp`                         | Emissão de código (ativação de conta ou reset de senha) |
+| `sendDuplicateRegistrationNotice` | Tentativa de cadastro com e-mail já registrado          |
+| `sendPasswordResetNotice`         | Confirmação de que a senha foi alterada com sucesso     |
+| `sendRegistrationConfirmation`    | Confirmação de que o cadastro foi concluído             |
+
+Em desenvolvimento, os e-mails são capturados por uma inbox virtual do Mailtrap (ver seção
+[E-mail em desenvolvimento](#e-mail-em-desenvolvimento-mailtrap)), permitindo inspecionar o HTML
+renderizado sem enviar nada de verdade.
+
+---
+
+## Modelagem de Dados (implementada)
 
 O schema inicial (`V1__create_initial_schemas.sql`) já está definido e versionado via Flyway,
 cobrindo o domínio de **Contas de Usuário** (clientes e funcionários) e **Catálogo de Produtos**.
@@ -364,7 +404,7 @@ Decisões relevantes de modelagem:
 
 ---
 
-## ⚙️ Configuração de Ambiente (implementada)
+## Configuração de Ambiente (implementada)
 
 O projeto usa **Spring Profiles** para separar comportamento entre ambientes:
 
@@ -379,7 +419,7 @@ commitadas no repositório. Consulte `.env.example` para a lista completa.
 
 ---
 
-## ▶️ Como Rodar o Projeto
+## Como Rodar o Projeto
 
 ### Pré-requisitos
 
@@ -410,10 +450,11 @@ Flyway e valida a formatação e o estilo do código.
 
 ### E-mail em desenvolvimento (Mailtrap)
 
-O envio de e-mails (código de ativação de conta, avisos de registro duplicado) usa Spring Mail. Em
-desenvolvimento, recomenda-se o **Mailtrap Email Testing (sandbox)** — os e-mails nunca saem de
-verdade, ficam capturados numa inbox virtual no painel do Mailtrap, permitindo testar com qualquer
-endereço (real ou fictício) sem restrição de destinatário:
+O envio de e-mails (código de ativação/reset, avisos de registro duplicado, senha alterada e
+confirmação de cadastro) usa Spring Mail com templates Thymeleaf. Em desenvolvimento, recomenda-se o
+**Mailtrap Email Testing (sandbox)** — os e-mails nunca saem de verdade, ficam capturados numa
+inbox virtual no painel do Mailtrap, permitindo testar com qualquer endereço (real ou fictício) sem
+restrição de destinatário e inspecionar o HTML renderizado de cada template:
 
 ```
 MAIL_HOST=sandbox.smtp.mailtrap.io
@@ -422,7 +463,7 @@ MAIL_USERNAME=<usuário da sua inbox de teste>
 MAIL_PASSWORD=<senha da sua inbox de teste>
 ```
 
-⚠️ Atenção para não confundir com o produto **Email Sending** do Mailtrap (host
+Atenção para não confundir com o produto **Email Sending** do Mailtrap (host
 `live.smtp.mailtrap.io`), que envia e-mails reais e restringe o destinatário em contas novas — as
 credenciais precisam ser especificamente da seção *Email Testing* do painel.
 
@@ -463,7 +504,7 @@ conectando em `localhost:6379` sem senha.
 
 ---
 
-## 🔄 Integração Contínua (CI)
+## Integração Contínua (CI)
 
 O projeto utiliza **GitHub Actions** para executar automaticamente as verificações de qualidade a
 cada `push` e `pull request` direcionados para a branch `main`.
@@ -512,7 +553,7 @@ considerado válido.
 
 ---
 
-## ✅ Qualidade de Código e Testes
+## Qualidade de Código e Testes
 
 O projeto possui um pipeline de qualidade integrado ao build (`mvn verify`) e executado
 automaticamente via **GitHub Actions** a cada push/PR para `main`.
@@ -538,7 +579,7 @@ banco de dados, reduzindo o tempo de execução e tornando os testes mais determ
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [x] **Etapa 1** — Modelagem de dados (PostgreSQL + Flyway), configuração de ambiente, arquitetura
   hexagonal definida, CI e tooling de qualidade
@@ -547,13 +588,15 @@ banco de dados, reduzindo o tempo de execução e tornando os testes mais determ
 - [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT — *em andamento: login,
   `JwtAuthenticationFilter`, `RoleHierarchy`, ativação de conta por código OTP (com rate limit via
   Redis), reenvio de código com cooldown, reset de senha completo (solicitar código, verificar,
-  confirmar nova senha com token de escopo restrito) e emissão de token pós-ativação prontos e
-  testados; ainda faltam: criação de `Staff` (restrita a `ADMIN`), troca de e-mail e refresh token*
+  confirmar nova senha com token de escopo restrito), notificações por e-mail via templates
+  Thymeleaf (OTP, registro duplicado, senha alterada, cadastro concluído) e emissão de token
+  pós-ativação prontos e testados; ainda faltam: criação de `Staff` (restrita a `ADMIN`), troca de
+  e-mail e refresh token*
 - [ ] **Etapa 4** — Carrinho de compras e Pedidos
 - [ ] **Etapa 5** — Wishlist com notificação de reposição de estoque
 
 ---
 
-## 📄 Licença
+## Licença
 
 Este projeto está sob a licença MIT.

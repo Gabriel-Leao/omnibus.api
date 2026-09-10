@@ -12,6 +12,7 @@ import br.com.leao.gabriel.omnibus.domain.model.AuthenticatedPrincipal;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.TokenIssuerPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,13 +35,15 @@ class ActivateAccountServiceTest {
   @Mock private Customer customer;
   @Mock private Customer activatedCustomer;
   @Mock private AuthenticatedPrincipal principal;
+  @Mock private EmailSenderPort emailSender;
 
   private ActivateAccountService service;
 
   @BeforeEach
   void setUp() {
     service =
-        new ActivateAccountService(otpVerifier, customerRepository, tokenIssuer, principalFactory);
+        new ActivateAccountService(
+            otpVerifier, customerRepository, tokenIssuer, principalFactory, emailSender);
   }
 
   @Test

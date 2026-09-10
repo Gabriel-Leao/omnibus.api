@@ -4,7 +4,7 @@ import br.com.leao.gabriel.omnibus.application.usecase.SendOtpUseCase;
 import br.com.leao.gabriel.omnibus.domain.exception.ResendCooldownActiveException;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
-import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.UserTokenRepositoryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,14 +19,13 @@ public class SendOtpService implements SendOtpUseCase {
 
   private final CustomerRepositoryPort customerRepositoryPort;
   private final VerificationOtpIssuer verificationOtpIssuer;
-  private final OtpSenderPort otpSender;
+  private final EmailSenderPort emailSender;
   private final UserTokenRepositoryPort userTokenRepository;
 
   /**
    * Sends a verification OTP when the customer is eligible and the resend cooldown has elapsed.
    *
-   * @param email the customer's email address
-   *
+   * @param email   the customer's email address
    * @param otpType the purpose of the OTP
    */
   @Override
@@ -53,7 +52,7 @@ public class SendOtpService implements SendOtpUseCase {
 
     var otp = verificationOtpIssuer.issue(customer.getId(), otpType);
 
-    otpSender.sendOtp(customer, otp, otpType);
+    emailSender.sendOtp(customer, otp, otpType);
   }
 
   private boolean isNotEligible(boolean activated, OtpType otpType) {

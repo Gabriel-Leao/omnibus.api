@@ -12,7 +12,7 @@ import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.model.UserToken;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
-import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.UserTokenRepositoryPort;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +31,7 @@ class SendOtpServiceTest {
 
   @Mock private CustomerRepositoryPort customerRepository;
   @Mock private VerificationOtpIssuer verificationOtpIssuer;
-  @Mock private OtpSenderPort otpSender;
+  @Mock private EmailSenderPort otpSender;
   @Mock private UserTokenRepositoryPort userTokenRepository;
   @Mock private Customer customer;
   @Mock private UserToken token;

@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
-import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ class RegisterCustomerServiceTest {
 
   @Mock private CustomerRepositoryPort customerRepository;
   @Mock private PasswordEncoderPort passwordEncoder;
-  @Mock private OtpSenderPort otpSender;
+  @Mock private EmailSenderPort otpSender;
   @Mock private VerificationOtpIssuer verificationOtpIssuer;
   @Mock private Customer savedCustomer;
 

@@ -4,7 +4,7 @@ import br.com.leao.gabriel.omnibus.application.usecase.RegisterCustomerUseCase;
 import br.com.leao.gabriel.omnibus.domain.model.Customer;
 import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
-import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import br.com.leao.gabriel.omnibus.domain.port.out.PasswordEncoderPort;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
 
   private final CustomerRepositoryPort customerRepository;
   private final PasswordEncoderPort passwordEncoder;
-  private final OtpSenderPort activationCodeSender;
+  private final EmailSenderPort emailSender;
   private final VerificationOtpIssuer verificationOtpIssuer;
 
   /**
@@ -33,7 +33,7 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
   public void execute(
       String name, String email, String rawPassword, LocalDate birthDate, String photoUrl) {
     if (customerRepository.existsByEmail(email)) {
-      activationCodeSender.sendDuplicateRegistrationNotice(email);
+      emailSender.sendDuplicateRegistrationNotice(email);
       return;
     }
 
@@ -42,6 +42,6 @@ public class RegisterCustomerService implements RegisterCustomerUseCase {
     Customer savedCustomer = customerRepository.save(customer);
 
     String code = verificationOtpIssuer.issue(savedCustomer.getId(), OtpType.ACCOUNT_ACTIVATION);
-    activationCodeSender.sendOtp(savedCustomer, code, OtpType.ACCOUNT_ACTIVATION);
+    emailSender.sendOtp(savedCustomer, code, OtpType.ACCOUNT_ACTIVATION);
   }
 }

@@ -3,7 +3,7 @@ package br.com.leao.gabriel.omnibus.application.service;
 import br.com.leao.gabriel.omnibus.application.usecase.ResetPasswordUseCase;
 import br.com.leao.gabriel.omnibus.domain.exception.CustomerNotFoundException;
 import br.com.leao.gabriel.omnibus.domain.port.out.CustomerRepositoryPort;
-import br.com.leao.gabriel.omnibus.domain.port.out.OtpSenderPort;
+import br.com.leao.gabriel.omnibus.domain.port.out.EmailSenderPort;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,7 +19,7 @@ public class ResetPasswordService implements ResetPasswordUseCase {
 
   private final CustomerRepositoryPort customerRepository;
   private final PasswordEncoder passwordEncoder;
-  private final OtpSenderPort otpSender;
+  private final EmailSenderPort emailSender;
 
   /**
    * Changes the customer password after a valid password reset request.
@@ -38,6 +38,6 @@ public class ResetPasswordService implements ResetPasswordUseCase {
     var passwordHash = passwordEncoder.encode(newPassword);
     customerRepository.save(customer.changePassword(passwordHash));
 
-    otpSender.sendPasswordResetNotice(customer.getEmail());
+    emailSender.sendPasswordResetNotice(customer.getEmail());
   }
 }

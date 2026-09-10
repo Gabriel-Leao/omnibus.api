@@ -6,7 +6,7 @@ import br.com.leao.gabriel.omnibus.domain.model.OtpType;
 /**
  * Output port for sending account-registration-related emails to customers.
  */
-public interface OtpSenderPort {
+public interface EmailSenderPort {
 
   /**
    * Sends an OTP to a customer.
@@ -31,4 +31,13 @@ public interface OtpSenderPort {
    * @param email the email address that is already registered
    */
   void sendPasswordResetNotice(String email);
+
+  /**
+   * Sends a purely informational notice confirming that a customer has completed registration.
+   *
+   * <p>No action is required from the customer; this is a courtesy notification only.
+   *
+   * @param customer the customer who has just completed registration
+   */
+  void sendRegistrationConfirmation(Customer customer);
 }

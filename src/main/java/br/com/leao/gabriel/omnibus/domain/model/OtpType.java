@@ -7,13 +7,15 @@ import lombok.Getter;
  */
 @Getter
 public enum OtpType {
-  ACCOUNT_ACTIVATION("Ative sua conta"),
-  PASSWORD_RESET("Redefinição de senha"),
-  EMAIL_CHANGE("Alteração de e-mail");
+  ACCOUNT_ACTIVATION("Ative sua conta", "Ative sua conta"),
+  PASSWORD_RESET("Redefinição de senha", "Recuperar senha"),
+  EMAIL_CHANGE("Alteração de e-mail", "Confirmar novo e-mail");
 
   private final String emailSubject;
+  private final String emailTag;
 
-  OtpType(String emailSubject) {
+  OtpType(String emailSubject, String emailTag) {
     this.emailSubject = emailSubject;
+    this.emailTag = emailTag;
   }
 }

@@ -1,515 +1,512 @@
 # Omnibus API
 
-API RESTful de e-commerce de quadrinhos (HQs), construída com foco em arquitetura de mercado, boas
-práticas de engenharia de software e um pipeline de qualidade de código reproduzível.
+A RESTful e-commerce API for comic books, built with a focus on production-grade architecture,
+sound software engineering practices, and a reproducible code quality pipeline.
 
-> Projeto de portfólio desenvolvido por [Gabriel Leão](https://github.com/) como parte da
-> recolocação como Dev Full Stack / Back-end Java.
-
----
-
-## Status atual do projeto
-
-Este projeto está em desenvolvimento incremental, documentado publicamente como parte do meu
-processo de aprendizado. A fundação (modelagem de dados, migrations, configuração de ambiente, CI,
-arquitetura hexagonal e pipeline de qualidade) está pronta. O fluxo de **registro e autenticação de
-`Customer`** está completo e testado de ponta a ponta (domínio, persistência, validação, JWT,
-notificações por e-mail e testes unitários); o fluxo equivalente de `Staff` (criação restrita a
-administradores) ainda está pendente (veja o [Roadmap](#roadmap)).
+> Portfolio project developed by [Gabriel Leão](https://github.com/) as part of his job search for
+> a Full Stack / Back-end Java Developer role.
 
 ---
 
-## Stack Tecnológica
+## Current project status
 
-| Categoria               | Tecnologia                                                          |
-|-------------------------|---------------------------------------------------------------------|
-| Linguagem               | Java 21                                                             |
-| Framework               | Spring Boot 4.0.7                                                   |
-| Persistência            | Spring Data JPA + Hibernate                                         |
-| Banco de Dados          | PostgreSQL 17 (via Docker Compose)                                  |
-| Cache / Rate limiting   | Redis 7 (via Docker Compose)                                        |
-| Migrations              | Flyway                                                              |
-| Segurança               | Spring Security + JWT (JJWT)                                        |
-| E-mail                  | Spring Mail + Thymeleaf (templates HTML), Mailtrap em dev           |
-| Documentação de API     | SpringDoc OpenAPI (Swagger UI)                                      |
-| Mapeamento DTO ↔ Entity | MapStruct                                                           |
-| Boilerplate             | Lombok                                                              |
-| Build                   | Maven                                                               |
-| Qualidade de Código     | Checkstyle (Google Style) + Spotless                                |
-| CI                      | GitHub Actions (build, testes, Checkstyle, Spotless a cada push/PR) |
-| Testes                  | JUnit 5 + Mockito                                                   |
+This project is under incremental development, documented publicly as part of my learning process.
+The foundation (data modelling, migrations, environment configuration, CI, hexagonal architecture
+and the quality pipeline) is in place. The **`Customer` registration and authentication** flow is
+complete and tested end to end (domain, persistence, validation, JWT, email notifications and unit
+tests); the equivalent `Staff` flow (creation restricted to administrators) is still pending (see
+the [Roadmap](#roadmap)).
 
 ---
 
-## Documentação da API (OpenAPI / Swagger UI)
+## Technology Stack
 
-Com a aplicação em execução, a documentação interativa está disponível em:
-
-| Recurso                      | URL                                                                              |
-|------------------------------|----------------------------------------------------------------------------------|
-| Swagger UI                   | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)   |
-| Especificação OpenAPI (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)           |
-| Especificação OpenAPI (YAML) | [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml) |
-
-A especificação documenta os endpoints disponíveis, os DTOs de requisição e resposta, exemplos de
-payloads, regras de validação e o formato padronizado de erros. Os endpoints protegidos declaram o
-esquema `bearerAuth` (JWT) e exibem o ícone de cadeado na UI.
-
-Para testar uma rota protegida no Swagger UI:
-
-1. Execute `POST /auth/login` e copie o campo `accessToken` da resposta.
-2. Clique em **Authorize**.
-3. Informe o token JWT no esquema `bearerAuth`.
-4. Execute a rota protegida. O Swagger UI enviará automaticamente o cabeçalho
-   `Authorization: Bearer <token>`.
-
-O endpoint `POST /password-reset/confirm` requer o token temporário retornado por
-`POST /password-reset/verify`. Esse token possui a authority `PASSWORD_RESET`; um access token
-comum não é aceito para confirmar uma nova senha.
+| Category               | Technology                                                            |
+|-------------------------|-----------------------------------------------------------------------|
+| Language                | Java 21                                                               |
+| Framework               | Spring Boot 4.0.7                                                     |
+| Persistence             | Spring Data JPA + Hibernate                                           |
+| Database                | PostgreSQL 17 (via Docker Compose)                                    |
+| Cache / Rate Limiting   | Redis 7 (via Docker Compose)                                          |
+| Migrations              | Flyway                                                                |
+| Security                | Spring Security + JWT (JJWT)                                          |
+| Email                   | Spring Mail + Thymeleaf (HTML templates), Mailtrap in dev              |
+| API Documentation       | SpringDoc OpenAPI (Swagger UI)                                        |
+| DTO ↔ Entity Mapping    | MapStruct                                                             |
+| Boilerplate             | Lombok                                                                |
+| Build                   | Maven                                                                 |
+| Code Quality            | Checkstyle (Google Style) + Spotless                                  |
+| CI                      | GitHub Actions (build, tests, Checkstyle, Spotless on every push/PR)  |
+| Testing                 | JUnit 5 + Mockito                                                     |
 
 ---
 
-## Arquitetura: Hexagonal (Ports & Adapters)
+## API Documentation (OpenAPI / Swagger UI)
 
-O projeto adota **Arquitetura Hexagonal** em vez do tradicional MVC em camadas. A ideia central: o
-**domínio de negócio fica isolado no núcleo**, sem depender de frameworks (Spring, JPA, HTTP), e se
-comunica com o mundo externo exclusivamente através de **interfaces (portas)**. Bancos de dados,
-REST, e-mail e segurança são tratados como detalhes de infraestrutura — **adapters** plugáveis nas
-bordas do sistema.
+With the application running, interactive documentation is available at:
 
-### Por que essa escolha
+| Resource                      | URL                                                                              |
+|--------------------------------|------------------------------------------------------------------------------------|
+| Swagger UI                    | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)   |
+| OpenAPI Specification (JSON)  | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)           |
+| OpenAPI Specification (YAML)  | [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml) |
 
-- **Isolamento real de regra de negócio**: o domínio pode ser testado sem subir Spring Context, sem
-  banco, sem mocks pesados.
-- **Trocar infraestrutura sem tocar no domínio**: substituir Postgres por outro banco, REST por
-  GraphQL, ou o provedor de e-mail, não deveria exigir alterar uma linha de regra de negócio.
-- **Decisão deliberada de aprendizado**: é um padrão mais avançado que camadas tradicionais, com
-  trade-offs reais (mais classes, mais mapeamento) — parte do meu processo de evolução técnica.
+The specification documents the available endpoints, request and response DTOs, payload examples,
+validation rules and the standardised error format. Protected endpoints declare the `bearerAuth`
+(JWT) scheme and display the padlock icon in the UI.
 
-### Regra de dependência
+To test a protected route in Swagger UI:
 
-As setas de dependência sempre apontam **de fora para dentro**: adapters conhecem o domínio; o
-domínio nunca conhece os adapters.
+1. Run `POST /auth/login` and copy the `accessToken` field from the response.
+2. Click **Authorize**.
+3. Enter the JWT token in the `bearerAuth` scheme.
+4. Run the protected route. Swagger UI will automatically send the `Authorization: Bearer <token>`
+   header.
+
+The `POST /password-reset/confirm` endpoint requires the temporary token returned by
+`POST /password-reset/verify`. That token carries the `PASSWORD_RESET` authority; a regular access
+token is not accepted to confirm a new password.
+
+---
+
+## Architecture: Hexagonal (Ports & Adapters)
+
+The project adopts **Hexagonal Architecture** instead of the traditional layered MVC. The core
+idea: the **business domain stays isolated at the centre**, with no dependency on frameworks
+(Spring, JPA, HTTP), and communicates with the outside world exclusively through
+**interfaces (ports)**. Databases, REST, email and security are treated as infrastructure details —
+pluggable **adapters** at the edges of the system.
+
+### Why this choice
+
+- **Genuine business-rule isolation**: the domain can be tested without starting the Spring
+  Context, without a database, without heavy mocks.
+- **Swapping infrastructure without touching the domain**: replacing Postgres with another
+  database, REST with GraphQL, or the email provider, shouldn't require changing a single line of
+  business logic.
+- **A deliberate learning decision**: it's a more advanced pattern than traditional layering, with
+  real trade-offs (more classes, more mapping) — part of my technical growth process.
+
+### Dependency rule
+
+Dependency arrows always point **from the outside in**: adapters know about the domain; the domain
+never knows about the adapters.
 
 ```text
 Adapter IN  →  Application  →  Domain  ←  Application  ←  Adapter OUT
 (Controller,                  (Model +                    (JPA, JWT,
- JWT Filter)                   Portas)                     Email, UserDetails)
+ JWT Filter)                   Ports)                      Email, UserDetails)
 ```
 
-### Estrutura de pacotes
+### Package structure
 
 ```text
 src/main/java/br/com/leao/gabriel/omnibus/
 ├── domain/
-│   ├── model/                      # Entidades de domínio puras (sem @Entity, sem Spring)
-│   ├── exception/                  # Exceções de negócio, sem conhecimento de HTTP
+│   ├── model/                      # Pure domain entities (no @Entity, no Spring)
+│   ├── exception/                  # Business exceptions, no knowledge of HTTP
 │   └── port/
-│       ├── in/                     # Interfaces de caso de uso
-│       └── out/                    # Interfaces de infraestrutura (ex: EmailSenderPort)
+│       ├── in/                     # Use case interfaces
+│       └── out/                    # Infrastructure interfaces (e.g. EmailSenderPort)
 │
 ├── application/
-│   └── service/                    # Implementação dos casos de uso (@Service), orquestra o domínio
+│   └── service/                    # Use case implementations (@Service), orchestrates the domain
 │
 ├── adapter/
 │   ├── in/
 │   │   └── web/
-│   │       ├── controller/         # Controllers REST
-│   │       ├── dto/request/        # DTOs de entrada, com Bean Validation
-│   │       ├── mapper/             # Domain → DTO de resposta
-│   │       ├── validation/         # Constraints customizadas (MinimumAge, EnumValue, PasswordMatches)
+│   │       ├── controller/         # REST controllers
+│   │       ├── dto/request/        # Input DTOs, with Bean Validation
+│   │       ├── mapper/             # Domain → response DTO
+│   │       ├── validation/         # Custom constraints (MinimumAge, EnumValue, PasswordMatches)
 │   │       └── exception/          # GlobalExceptionHandler (@RestControllerAdvice)
 │   └── out/
 │       ├── persistence/
-│       │   ├── entity/             # @Entity JPA — separada do modelo de domínio
-│       │   ├── repository/         # Interfaces Spring Data JPA
-│       │   └── *PersistenceAdapter.java   # implementa as portas de saída (@Component)
+│       │   ├── entity/             # JPA @Entity — separate from the domain model
+│       │   ├── repository/         # Spring Data JPA interfaces
+│       │   └── *PersistenceAdapter.java   # implements the output ports (@Component)
 │       ├── notification/
-│       │   ├── SmtpEmailSenderAdapter.java  # implementa EmailSenderPort via JavaMailSender
-│       │   └── EmailTemplateRenderer.java   # renderiza os templates Thymeleaf de e-mail
+│       │   ├── SmtpEmailSenderAdapter.java  # implements EmailSenderPort via JavaMailSender
+│       │   └── EmailTemplateRenderer.java   # renders the Thymeleaf email templates
 │       └── security/
 │           ├── UserDetailsServiceImpl.java
 │           └── JwtService.java
 │
 └── config/
-    ├── SecurityConfig.java         # Fiação/beans — fora da estrutura hexagonal "pura"
-    ├── AsyncConfig.java            # Configuração do executor usado pelos envios @Async
-    └── ThymeleafEmailConfig.java   # Template engine dedicado à renderização de e-mail
+    ├── SecurityConfig.java         # Wiring/beans — outside the "pure" hexagonal structure
+    ├── AsyncConfig.java            # Configuration of the executor used by @Async sends
+    └── ThymeleafEmailConfig.java   # Template engine dedicated to email rendering
 ```
 
-### Convenção de wiring
+### Wiring convention
 
-Implementações de casos de uso e adapters são anotadas diretamente (`@Service`, `@Component`,
-`@Repository`), sem classes de configuração manual (`@Configuration` + `@Bean`) para o wiring de
-casos de uso. `@Configuration` fica reservado para beans genuinamente de infraestrutura
-(`PasswordEncoder`, `SecurityFilterChain`, o `TemplateEngine` do Thymeleaf, etc.).
+Use case implementations and adapters are annotated directly (`@Service`, `@Component`,
+`@Repository`), with no manual configuration classes (`@Configuration` + `@Bean`) for use case
+wiring. `@Configuration` is reserved for genuinely infrastructural beans (`PasswordEncoder`,
+`SecurityFilterChain`, Thymeleaf's `TemplateEngine`, etc.).
 
-### Convenção adotada para peças do Spring Security
+### Convention adopted for Spring Security components
 
-O Spring Security não foi desenhado pensando em Hexagonal, então algumas classes exigem uma decisão
-explícita de onde morar:
+Spring Security wasn't designed with Hexagonal in mind, so some classes require an explicit
+decision about where they belong:
 
-| Classe                    | Papel                                         | Localização                | Justificativa                                                                                      |
-|---------------------------|-----------------------------------------------|----------------------------|----------------------------------------------------------------------------------------------------|
-| `UserDetailsServiceImpl`  | Busca o usuário no banco para autenticação    | `adapter/out/security/`    | É chamada *pelo* Spring Security para buscar dado externo — do ponto de vista do domínio, é saída. |
-| `JwtService`              | Gera/valida o token                           | `adapter/out/security/`    | Preocupação técnica de infraestrutura, não regra de negócio do domínio.                            |
-| `JwtAuthenticationFilter` | Intercepta a requisição HTTP e extrai o token | `adapter/in/web/security/` | Reage a uma requisição chegando — é entrada.                                                       |
-| `SecurityConfig`          | Configuração do `SecurityFilterChain`         | `config/`                  | Fiação de infraestrutura pura; forçar isso em porta/adapter gera mais confusão que clareza.        |
+| Class                    | Role                                           | Location                    | Rationale                                                                                            |
+|---------------------------|-------------------------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------|
+| `UserDetailsServiceImpl`  | Looks up the user in the database for authentication | `adapter/out/security/`    | It's called *by* Spring Security to fetch external data — from the domain's point of view, that's an output concern. |
+| `JwtService`              | Generates/validates the token                   | `adapter/out/security/`    | A technical infrastructure concern, not a domain business rule.                                        |
+| `JwtAuthenticationFilter` | Intercepts the HTTP request and extracts the token | `adapter/in/web/security/` | Reacts to an incoming request — it's an input concern.                                                 |
+| `SecurityConfig`          | `SecurityFilterChain` configuration              | `config/`                   | Pure infrastructure wiring; forcing it into a port/adapter would create more confusion than clarity.   |
 
-> **Nota temporária**: `/auth/**` e `/password-reset` / `/password-reset/verify` continuam
-> liberados (`permitAll`), já que fazem parte do próprio fluxo de autenticação. A exceção é
-> `/password-reset/confirm`, que exige `hasAuthority("PASSWORD_RESET")` — só aceito quando o JWT
-> apresentado é, especificamente, o token de curta duração emitido por
-> `TokenIssuerPort.issuePasswordResetToken` após a verificação do código, não um access token comum.
-> `@PreAuthorize` (com `RoleHierarchy`: `ADMIN` ⊃ `EDITOR` ⊃ `MANAGER` ⊃ `VIEWER`) já está
-> disponível para uso em métodos de service/controller. As demais rotas continuam liberadas
-> (`anyRequest().permitAll()`) simplesmente porque os módulos de catálogo e pedidos ainda não
-> existem — a whitelist será restringida rota a rota conforme cada módulo for implementado.
-
----
-
-## Contas de usuário: `Customer` e `Staff`
-
-Em vez de uma única entidade `User` genérica, o domínio modela dois tipos de conta **estruturalmente
-separados**, sem herança entre si (domínio e DTOs) além de uma base de identidade comum, refletindo
-que cliente e funcionário têm regras, campos e ciclos de vida diferentes:
-
-- **`Customer`**: autocadastro público, exige idade mínima (18 anos), pode solicitar exclusão da
-  própria conta (com carência de 90 dias antes do expurgo definitivo).
-- **`Staff`**: criado apenas por um administrador, possui papel (`VIEWER`, `MANAGER`, `EDITOR`,
-  `ADMIN`) e código de funcionário — nunca se autocadastra, nunca compra ou favorita produtos.
-
-### Modelagem no banco (Class Table Inheritance)
-
-`users` guarda o que é comum a qualquer conta (autenticação, status, tipo); `customer_profiles` e
-`staff_profiles` guardam os dados específicos de cada tipo, ligadas por FK/PK compartilhada — a
-mesma técnica usada em `products`/`books`.
-
-### Modelagem no domínio e na persistência
-
-- **Domínio**: `UserAccount` (abstrata) concentra validação compartilhada (ex.: consistência entre
-  `status` e `deletedAt`); `Customer` e `Staff` estendem, cada uma com suas próprias regras e
-  campos.
-- **JPA**: `UserJpaEntity` (abstrata, `@Inheritance(JOINED)`) mapeia a tabela base;
-  `CustomerJpaEntity`/`StaffJpaEntity` mapeiam as tabelas filhas, com o discriminador
-  (`account_type`) controlado automaticamente pelo Hibernate.
-- **DTOs de request**: `RegisterCustomerRequest` e `RegisterStaffRequest` são *records*
-  independentes, sem herança entre eles — os poucos campos em comum (`name`, `email`, `password`)
-  são duplicados deliberadamente, evitando uma abstração forçada para um conjunto pequeno de campos.
-
-### Validação customizada (Bean Validation)
-
-Além das anotações padrão (`@NotBlank`, `@Email`, `@Size`), o projeto define constraints
-reutilizáveis em `adapter/in/web/validation/`:
-
-- **`@MinimumAge`**: valida idade mínima a partir de uma data de nascimento, sem persistir idade
-  calculada.
-- **`@EnumValue`**: valida se uma `String` corresponde a uma constante de um enum arbitrário,
-  reutilizável para qualquer enum do domínio.
-- **`@PasswordMatches`**: constraint de nível de classe (via interface `PasswordConfirmable`,
-  satisfeita automaticamente pelos *records*) que compara `password` e `confirmPassword`.
-
-### Testes das validações customizadas
-
-As constraints customizadas possuem testes unitários isolados, verificando suas regras diretamente
-sem a necessidade de subir o contexto completo do Spring:
-
-- **`EnumValueValidatorTest`**: verifica valores válidos, inválidos e valores `null`, além da
-  mensagem de violação personalizada.
-- **`MinimumAgeValidatorTest`**: verifica a idade mínima configurada, incluindo casos abaixo do
-  limite, exatamente no limite e valores `null`.
-- **`PasswordMatchesValidatorTest`**: verifica senhas iguais, senhas diferentes e o comportamento
-  quando um dos valores é `null`, além de garantir que a violação seja direcionada ao campo
-  `confirmPassword`.
-
-Essa abordagem mantém os testes das regras de validação rápidos e independentes de banco de dados,
-Spring Context ou infraestrutura externa.
-
-### Tratamento de erros
-
-Um `@RestControllerAdvice` centralizado (`GlobalExceptionHandler`) traduz exceções de
-domínio/validação em respostas HTTP padronizadas, incluindo um `traceId` gerado por requisição (via
-`MDC`) para correlacionar logs e respostas de erro. As exceções de domínio seguem uma hierarquia por
-categoria (`NotFoundException`, `ConflictException`, `ForbiddenException`,
-`BusinessRuleViolationException`), de forma que novas exceções específicas (em produtos, pedidos,
-etc.) nunca exigem alterar o handler central — basta estender a categoria correta. Há também um
-handler dedicado para `DataIntegrityViolationException`, convertido em `409 Conflict` genérico: uma
-rede de segurança para violações de constraint que escapem das validações de aplicação (como duas
-emissões de OTP concorrentes disputando o índice único de token ativo).
+> **Temporary note**: `/auth/**` and `/password-reset` / `/password-reset/verify` remain open
+> (`permitAll`), since they're part of the authentication flow itself. The exception is
+> `/password-reset/confirm`, which requires `hasAuthority("PASSWORD_RESET")` — only accepted when
+> the JWT presented is, specifically, the short-lived token issued by
+> `TokenIssuerPort.issuePasswordResetToken` after code verification, not a regular access token.
+> `@PreAuthorize` (with `RoleHierarchy`: `ADMIN` ⊃ `EDITOR` ⊃ `MANAGER` ⊃ `VIEWER`) is already
+> available for use on service/controller methods. The remaining routes stay open
+> (`anyRequest().permitAll()`) simply because the catalogue and order modules don't exist yet — the
+> whitelist will be tightened route by route as each module is implemented.
 
 ---
 
-## Autenticação (JWT)
+## User accounts: `Customer` and `Staff`
 
-Login e emissão de token seguem a mesma separação de portas/adapters do restante do projeto:
+Rather than a single generic `User` entity, the domain models two **structurally separate** account
+types, with no inheritance between them (domain and DTOs) beyond a shared identity base, reflecting
+that customers and staff have different rules, fields and lifecycles:
 
-- **`LoginUseCase`** (porta de entrada) é implementada por `AuthenticationService`, que localiza a
-  conta (checando `Customer` e depois `Staff`, já que o e-mail não indica o tipo por si só), valida
-  a senha e o status (`ACTIVE`), e delega a emissão do token a `TokenIssuerPort` — uma porta de
-  saída que não sabe que o token emitido é especificamente um JWT.
-- **`JwtTokenIssuerAdapter`** e **`JwtTokenParser`** (`adapter/out/security/`) concentram toda a
-  dependência de `io.jsonwebtoken` — se o mecanismo de token mudasse amanhã, nenhuma linha do
-  domínio ou da aplicação precisaria mudar.
-- **`JwtAuthenticationFilter`** (`adapter/in/web/security/`) intercepta cada requisição, valida o
-  token do header `Authorization` e popula o `SecurityContext`, habilitando `@PreAuthorize` nos
-  services/controllers.
-- **`RoleHierarchy`** (`SecurityConfig`) declara que `ADMIN` implica `EDITOR`, que implica
-  `MANAGER`, que implica `VIEWER` — uma única checagem `hasRole('VIEWER')` já admite os três papéis
-  superiores, sem repetir a cadeia de permissões em cada rota.
+- **`Customer`**: public self-registration, requires a minimum age (18), can request deletion of
+  their own account (with a 90-day grace period before permanent erasure).
+- **`Staff`**: created only by an administrator, has a role (`VIEWER`, `MANAGER`, `EDITOR`,
+  `ADMIN`) and an employee code — never self-registers, never buys or favourites products.
 
-### Prevenção de enumeração de usuários (User Enumeration)
+### Database modelling (Class Table Inheritance)
 
-`POST /auth/register`, `POST /auth/resend-activation` e `POST /password-reset` devolvem **sempre a
-mesma resposta** (`202 Accepted` com uma mensagem genérica), independentemente de o e-mail já estar
-cadastrado, já estar ativado, ou nem existir — o resultado real (código enviado, aviso de registro
-duplicado, ou nenhuma ação) é comunicado exclusivamente por e-mail, nunca pela resposta HTTP. Da
-mesma forma, `POST /auth/login` nunca distingue "e-mail não encontrado" de "senha incorreta", e a
-verificação de código (`POST /auth/activate`, `POST /password-reset/verify`) nunca distingue
-"e-mail desconhecido" de "código errado" — sempre respondendo com o mesmo erro genérico. Isso evita
-que um atacante use essas respostas para descobrir quais e-mails possuem conta na plataforma — uma
-vulnerabilidade real e catalogada (CWE-203 / OWASP API Security).
+`users` holds what's common to any account (authentication, status, type); `customer_profiles` and
+`staff_profiles` hold the data specific to each type, linked by a shared FK/PK — the same technique
+used for `products`/`books`.
 
-Como consequência dessa decisão, `RegisterCustomerUseCase.execute()` e `SendOtpUseCase.execute()`
-não retornam o `Customer` nem revelam se algo foi de fato enviado — o resultado real chega apenas
-por e-mail.
+### Domain and persistence modelling
 
-### Verificação por código (OTP): ativação de conta e reset de senha
+- **Domain**: `UserAccount` (abstract) holds shared validation (e.g. consistency between `status`
+  and `deletedAt`); `Customer` and `Staff` extend it, each with its own rules and fields.
+- **JPA**: `UserJpaEntity` (abstract, `@Inheritance(JOINED)`) maps the base table;
+  `CustomerJpaEntity`/`StaffJpaEntity` map the child tables, with the discriminator
+  (`account_type`) managed automatically by Hibernate.
+- **Request DTOs**: `RegisterCustomerRequest` and `RegisterStaffRequest` are independent *records*,
+  with no inheritance between them — the handful of shared fields (`name`, `email`, `password`) are
+  deliberately duplicated, avoiding a forced abstraction over a small set of fields.
 
-Em vez de um link de ativação, a conta é confirmada (e a senha redefinida) por um **código numérico
-de 6 dígitos** (mais amigável em mobile, evita problemas com scanners de e-mail corporativos
-"clicando" automaticamente em links). O mecanismo é compartilhado entre os fluxos de ativação de
-conta, reset de senha e (futuramente) troca de e-mail, todos apoiados na mesma tabela `user_tokens`:
+### Custom validation (Bean Validation)
 
-- **`UserToken`** (domínio) guarda apenas o **hash SHA-256** do código — nunca o valor em claro —
-  junto com tipo (`ACCOUNT_ACTIVATION`, `PASSWORD_RESET`, `EMAIL_CHANGE`), expiração, contagem de
-  tentativas e se já foi usado.
-- **`VerificationOtpIssuer`** (componente compartilhado em `application/service/`) centraliza a
-  emissão: checa o limite diário via Redis, revoga qualquer token ainda ativo do usuário (via um
-  `SELECT ... FOR UPDATE` para serializar emissões concorrentes em vez de disputar o índice único
-  `ux_user_token_one_active`), gera o novo código, persiste o hash e devolve o valor em claro apenas
-  para o chamador enviar por e-mail.
-- **`OtpVerifier`** (componente compartilhado) contém a lógica de verificação usada tanto na
-  ativação quanto no reset de senha: valida o código submetido contra o token mais recente do tipo
-  informado, aplicando um **máximo de 3 tentativas** antes de exigir um código novo, sem revelar
-  qual condição específica falhou (e-mail desconhecido, código errado, código expirado).
-- **`ActivateAccountService`** usa o `OtpVerifier` com `OtpType.ACCOUNT_ACTIVATION`; ao validar com
-  sucesso, ativa a conta e já emite um access token, evitando um passo extra de login logo após a
-  ativação.
-- **`VerifyPasswordResetService`** usa o mesmo `OtpVerifier` com `OtpType.PASSWORD_RESET`; ao
-  validar com sucesso, emite um **token de curta duração com escopo restrito** (authority
-  `PASSWORD_RESET`, não um access token normal) através de
-  `TokenIssuerPort.issuePasswordResetToken`. Esse token só autoriza `POST /password-reset/confirm` —
-  o `JwtAuthenticationFilter` confere que a claim `purpose` do token bate com `PASSWORD_RESET` antes
-  de aceitar essa authority, e o `SecurityConfig` exige `hasAuthority("PASSWORD_RESET")`
-  especificamente nessa rota.
-- **`ResetPasswordService`** troca a senha do `Customer` autenticado pelo token de reset,
-  reencodando com o `PasswordEncoder` configurado.
-- **`SendOtpService`** unifica o (re)envio de código para os três tipos de OTP: verifica se o
-  cliente existe e está no estado certo para o tipo solicitado (`Customer.canUseOtp`/`isEligible`),
-  respeita o **cooldown de 60 segundos** entre emissões (`UserToken.isResendAllowed`), delega a
-  emissão ao `VerificationOtpIssuer` e o envio ao `EmailSenderPort`. É o service por trás de
-  `POST /auth/resend-activation` e `POST /password-reset`.
-- **`AuthenticatedPrincipalFactory`** centraliza a montagem de `AuthenticatedPrincipal` a partir de
-  `Customer` ou `Staff`, reaproveitada tanto por `AuthenticationService` (login) quanto por
-  `ActivateAccountService` (ativação), evitando duplicar a lógica de qual authority cada tipo de
-  conta recebe.
+Besides the standard annotations (`@NotBlank`, `@Email`, `@Size`), the project defines reusable
+constraints in `adapter/in/web/validation/`:
 
-Uma pegadinha de `@Transactional` que valeu registrar: por padrão, uma `RuntimeException` não
-tratada reverte toda a transação — inclusive o incremento do contador de tentativas que deveria
-persistir junto com a rejeição de um código inválido. Corrigido com
-`@Transactional(noRollbackFor = InvalidVerificationCodeException.class)` em `ActivateAccountService`
-e `VerifyPasswordResetService`, já que essa exceção representa fluxo de negócio esperado, não uma
-falha técnica que deva desfazer o que já aconteceu.
+- **`@MinimumAge`**: validates a minimum age from a date of birth, without persisting a calculated
+  age.
+- **`@EnumValue`**: validates that a `String` matches a constant of an arbitrary enum, reusable for
+  any domain enum.
+- **`@PasswordMatches`**: a class-level constraint (via the `PasswordConfirmable` interface,
+  satisfied automatically by the *records*) that compares `password` and `confirmPassword`.
 
-### Limite de emissão de código (Redis)
+### Tests for the custom validations
 
-Além do limite de tentativas por código (Postgres), existe um **limite de 3 códigos emitidos por
-tipo/usuário a cada 24 horas** (janela móvel, não dia-calendário), implementado em Redis via
-`INCR` + `EXPIRE` atômico — o TTL é definido apenas na primeira ocorrência da chave, para que a
-janela realmente role a cada 24h em vez de ser reiniciada a cada nova tentativa. Essa é,
-deliberadamente, a única responsabilidade do Redis no projeto até agora: dados que precisam de
-transação com outras tabelas (como o próprio `UserToken`) permanecem no Postgres; apenas o contador
-de rate limit — efêmero, sem relação com outras entidades — vive no Redis.
+The custom constraints have isolated unit tests, checking their rules directly without needing to
+start the full Spring context:
+
+- **`EnumValueValidatorTest`**: checks valid values, invalid values and `null` values, as well as
+  the custom violation message.
+- **`MinimumAgeValidatorTest`**: checks the configured minimum age, including cases below the
+  limit, exactly at the limit, and `null` values.
+- **`PasswordMatchesValidatorTest`**: checks matching passwords, differing passwords and the
+  behaviour when one of the values is `null`, as well as ensuring the violation is attributed to
+  the `confirmPassword` field.
+
+This approach keeps the validation-rule tests fast and independent of the database, the Spring
+context or external infrastructure.
+
+### Error handling
+
+A centralised `@RestControllerAdvice` (`GlobalExceptionHandler`) translates domain/validation
+exceptions into standardised HTTP responses, including a `traceId` generated per request (via
+`MDC`) to correlate logs and error responses. Domain exceptions follow a hierarchy by category
+(`NotFoundException`, `ConflictException`, `ForbiddenException`, `BusinessRuleViolationException`),
+so new, specific exceptions (in products, orders, etc.) never require changing the central handler
+— extending the right category is enough. There's also a dedicated handler for
+`DataIntegrityViolationException`, converted into a generic `409 Conflict`: a safety net for
+constraint violations that slip past the application-level validations (such as two concurrent OTP
+issuances racing for the active-token unique index).
 
 ---
 
-## Notificações por e-mail
+## Authentication (JWT)
 
-Toda a comunicação por e-mail do fluxo de conta passa por **`EmailSenderPort`** (porta de saída do
-domínio), implementada por **`SmtpEmailSenderAdapter`** via `JavaMailSender`. O domínio e a camada
-de aplicação não sabem que o envio é por SMTP, nem como o corpo do e-mail é montado — apenas chamam
-a porta com os dados necessários.
+Login and token issuance follow the same ports/adapters separation as the rest of the project:
 
-- **`SmtpEmailSenderAdapter`** (`adapter/out/notification/`) monta a `MimeMessage` e delega a
-  renderização do HTML a `EmailTemplateRenderer`. Todos os métodos são `@Async`: os endpoints que os
-  disparam já responderam ao cliente antes do envio acontecer, garantindo que o tempo de resposta
-  não varie conforme um e-mail é de fato enviado ou não — uma falha no envio é apenas logada, nunca
-  propagada de volta para uma requisição HTTP já concluída.
-- **`EmailTemplateRenderer`** processa os templates Thymeleaf localizados em
-  `src/main/resources/templates/email/`, usando `layout.html` como fragmento base (cabeçalho,
-  rodapé e uma tag de contexto por tipo de e-mail) e um template específico por tipo de mensagem:
-  `otp.html`, `duplicate-registration.html`, `password-reset.html` e
-  `registration-confirmation.html`.
-- **`ThymeleafEmailConfig`** (`config/`) configura um `TemplateEngine`/`ITemplateResolver` dedicado
-  à renderização de e-mail, isolado do resolver padrão do Spring MVC.
-- **`AsyncConfig`** (`config/`) define o executor usado pelos métodos `@Async` de envio.
+- **`LoginUseCase`** (input port) is implemented by `AuthenticationService`, which locates the
+  account (checking `Customer` and then `Staff`, since the email alone doesn't indicate the type),
+  validates the password and the status (`ACTIVE`), and delegates token issuance to
+  `TokenIssuerPort` — an output port that has no idea the token issued is specifically a JWT.
+- **`JwtTokenIssuerAdapter`** and **`JwtTokenParser`** (`adapter/out/security/`) contain the entire
+  dependency on `io.jsonwebtoken` — if the token mechanism changed tomorrow, not a single line of
+  the domain or application layer would need to change.
+- **`JwtAuthenticationFilter`** (`adapter/in/web/security/`) intercepts every request, validates
+  the token from the `Authorization` header and populates the `SecurityContext`, enabling
+  `@PreAuthorize` on services/controllers.
+- **`RoleHierarchy`** (`SecurityConfig`) declares that `ADMIN` implies `EDITOR`, which implies
+  `MANAGER`, which implies `VIEWER` — a single `hasRole('VIEWER')` check already admits the three
+  higher roles, without repeating the permission chain on every route.
 
-Tipos de e-mail enviados hoje:
+### User enumeration prevention
 
-| Método                            | Quando é disparado                                      |
-|-----------------------------------|---------------------------------------------------------|
-| `sendOtp`                         | Emissão de código (ativação de conta ou reset de senha) |
-| `sendDuplicateRegistrationNotice` | Tentativa de cadastro com e-mail já registrado          |
-| `sendPasswordResetNotice`         | Confirmação de que a senha foi alterada com sucesso     |
-| `sendRegistrationConfirmation`    | Confirmação de que o cadastro foi concluído             |
+`POST /auth/register`, `POST /auth/resend-activation` and `POST /password-reset` **always return
+the same response** (`202 Accepted` with a generic message), regardless of whether the email is
+already registered, already activated, or doesn't exist at all — the actual outcome (code sent,
+duplicate-registration notice, or no action) is communicated exclusively by email, never through
+the HTTP response. Likewise, `POST /auth/login` never distinguishes "email not found" from "wrong
+password", and code verification (`POST /auth/activate`, `POST /password-reset/verify`) never
+distinguishes "unknown email" from "wrong code" — always responding with the same generic error.
+This stops an attacker from using these responses to discover which emails have an account on the
+platform — a real, catalogued vulnerability (CWE-203 / OWASP API Security).
 
-Em desenvolvimento, os e-mails são capturados por uma inbox virtual do Mailtrap (ver seção
-[E-mail em desenvolvimento](#e-mail-em-desenvolvimento-mailtrap)), permitindo inspecionar o HTML
-renderizado sem enviar nada de verdade.
+As a consequence of this decision, `RegisterCustomerUseCase.execute()` and
+`SendOtpUseCase.execute()` don't return the `Customer`, nor reveal whether anything was actually
+sent — the real outcome only arrives by email.
+
+### Code verification (OTP): account activation and password reset
+
+Instead of an activation link, the account is confirmed (and the password reset) using a
+**6-digit numeric code** (friendlier on mobile, and it avoids issues with corporate email scanners
+automatically "clicking" links). The mechanism is shared across the account activation, password
+reset and (in future) email change flows, all backed by the same `user_tokens` table:
+
+- **`UserToken`** (domain) stores only the code's **SHA-256 hash** — never the plaintext value —
+  along with its type (`ACCOUNT_ACTIVATION`, `PASSWORD_RESET`, `EMAIL_CHANGE`), expiry, attempt
+  count and whether it's already been used.
+- **`VerificationOtpIssuer`** (shared component in `application/service/`) centralises issuance:
+  checks the daily limit via Redis, revokes any of the user's still-active tokens (via a
+  `SELECT ... FOR UPDATE` to serialise concurrent issuances instead of racing for the
+  `ux_user_token_one_active` unique index), generates the new code, persists the hash and returns
+  the plaintext value only for the caller to send by email.
+- **`OtpVerifier`** (shared component) holds the verification logic used by both activation and
+  password reset: it checks the submitted code against the most recent token of the given type,
+  enforcing a **maximum of 3 attempts** before requiring a new code, without revealing which
+  specific condition failed (unknown email, wrong code, expired code).
+- **`ActivateAccountService`** uses `OtpVerifier` with `OtpType.ACCOUNT_ACTIVATION`; on successful
+  validation, it activates the account and issues an access token straight away, avoiding an extra
+  login step right after activation.
+- **`VerifyPasswordResetService`** uses the same `OtpVerifier` with `OtpType.PASSWORD_RESET`; on
+  successful validation, it issues a **short-lived, scope-restricted token** (the `PASSWORD_RESET`
+  authority, not a normal access token) through `TokenIssuerPort.issuePasswordResetToken`. That
+  token only authorises `POST /password-reset/confirm` — `JwtAuthenticationFilter` checks that the
+  token's `purpose` claim matches `PASSWORD_RESET` before accepting that authority, and
+  `SecurityConfig` requires `hasAuthority("PASSWORD_RESET")` specifically on that route.
+- **`ResetPasswordService`** changes the password of the `Customer` authenticated by the reset
+  token, re-encoding it with the configured `PasswordEncoder`.
+- **`SendOtpService`** unifies (re)sending a code for all three OTP types: checks that the customer
+  exists and is in the right state for the requested type (`Customer.canUseOtp`/`isEligible`),
+  honours the **60-second cooldown** between issuances (`UserToken.isResendAllowed`), delegates
+  issuance to `VerificationOtpIssuer` and sending to `EmailSenderPort`. It's the service behind
+  `POST /auth/resend-activation` and `POST /password-reset`.
+- **`AuthenticatedPrincipalFactory`** centralises building an `AuthenticatedPrincipal` from a
+  `Customer` or a `Staff`, reused by both `AuthenticationService` (login) and
+  `ActivateAccountService` (activation), avoiding duplicating the logic of which authority each
+  account type receives.
+
+A `@Transactional` gotcha worth noting: by default, an unhandled `RuntimeException` rolls back the
+entire transaction — including the attempt-counter increment that should persist alongside the
+rejection of an invalid code. Fixed with
+`@Transactional(noRollbackFor = InvalidVerificationCodeException.class)` on
+`ActivateAccountService` and `VerifyPasswordResetService`, since that exception represents expected
+business flow, not a technical failure that should undo what's already happened.
+
+### Code issuance limit (Redis)
+
+On top of the per-code attempt limit (Postgres), there's a **limit of 3 codes issued per
+type/user every 24 hours** (a rolling window, not a calendar day), implemented in Redis via an
+atomic `INCR` + `EXPIRE` — the TTL is only set on the key's first occurrence, so the window
+genuinely rolls every 24h instead of resetting on every new attempt. This is, deliberately, Redis's
+only responsibility in the project so far: data that needs a transaction with other tables (such as
+`UserToken` itself) stays in Postgres; only the rate-limit counter — ephemeral, with no
+relationship to other entities — lives in Redis.
 
 ---
 
-## Modelagem de Dados (implementada)
+## Email notifications
 
-O schema inicial (`V1__create_initial_schemas.sql`) já está definido e versionado via Flyway,
-cobrindo o domínio de **Contas de Usuário** (clientes e funcionários) e **Catálogo de Produtos**.
-Decisões relevantes de modelagem:
+All email communication in the account flow goes through **`EmailSenderPort`** (a domain output
+port), implemented by **`SmtpEmailSenderAdapter`** via `JavaMailSender`. The domain and application
+layer have no idea sending happens over SMTP, nor how the email body is assembled — they just call
+the port with the necessary data.
 
-- **Herança de tabelas (Class Table Inheritance)**: usada tanto em `products`/`books` (extensível a
-  novos tipos de produto) quanto em `users`/`customer_profiles`/`staff_profiles`.
-- **Entidades associativas ricas**: relações N:N que carregam atributos próprios (ex.:
-  `book_authors` com o papel do autor na obra; `product_languages` com o tipo de presença do idioma)
-  são modeladas como entidades explícitas, não como `ManyToMany` simples.
-- **Ciclo de vida via `status`**: `users.status` cobre `PENDING_ACTIVATION`, `ACTIVE`,
-  `PENDING_DELETION`, `SUSPENDED` e `BANNED`, distinguindo contas aguardando confirmação, deleção
-  autossolicitada (com carência de 90 dias) e moderação administrativa, sem ambiguidade entre esses
-  fluxos.
-- **Tokens de uso único (`user_tokens`)**: tabela genérica (via `token_type`) para ativação de
-  conta, reset de senha e (futuramente) troca de e-mail. Guarda apenas o hash SHA-256 do código,
-  nunca o valor em claro, com expiração obrigatória e contagem de tentativas de verificação. Um
-  índice único parcial (`ux_user_token_one_active`, `WHERE token_status = 'ACTIVE'`) garante no
-  próprio banco que um usuário nunca tenha mais de um token ativo simultaneamente — a aplicação
-  também serializa emissões concorrentes via lock pessimista, mas a constraint é a última linha de
-  defesa.
-- **UUID como chave primária de `users`**: evita enumeração de contas via URL. Entidades de catálogo
-  mantêm `BIGINT` sequencial por simplicidade e performance de indexação.
-- **Soft delete e retenção**: usuários e produtos não são removidos fisicamente no fluxo comum — um
-  status controla a disponibilidade, preservando histórico e permitindo expurgo controlado apenas
-  para deleções autossolicitadas já fora do prazo de carência.
-- **Busca full-text nativa do Postgres**: índice `GIN` sobre
-  `to_tsvector('portuguese', title || description)` em `products`.
-- **Campos adicionados apenas com propósito de negócio concreto**: decisões como não incluir `sku`,
-  múltiplos papéis simultâneos ou datas biográficas de autor foram deliberadas — nenhum desses dados
-  alimenta uma tela ou regra existente hoje.
+- **`SmtpEmailSenderAdapter`** (`adapter/out/notification/`) builds the `MimeMessage` and delegates
+  HTML rendering to `EmailTemplateRenderer`. Every method is `@Async`: the endpoints that trigger
+  them have already responded to the client before sending happens, ensuring response time doesn't
+  vary depending on whether an email is actually sent or not — a send failure is only logged, never
+  propagated back to an HTTP request that's already completed.
+- **`EmailTemplateRenderer`** processes the Thymeleaf templates under
+  `src/main/resources/templates/email/`, using `layout.html` as the base fragment (header, footer
+  and a context tag per email type) and a specific template per message type: `otp.html`,
+  `duplicate-registration.html`, `password-reset.html` and `registration-confirmation.html`.
+- **`ThymeleafEmailConfig`** (`config/`) configures a `TemplateEngine`/`ITemplateResolver`
+  dedicated to email rendering, isolated from Spring MVC's default resolver.
+- **`AsyncConfig`** (`config/`) defines the executor used by the `@Async` sending methods.
 
----
+Email types sent today:
 
-## Configuração de Ambiente (implementada)
+| Method                             | When it's triggered                                         |
+|--------------------------------------|-----------------------------------------------------------------|
+| `sendOtp`                           | Code issuance (account activation or password reset)          |
+| `sendDuplicateRegistrationNotice`   | Registration attempt with an already-registered email          |
+| `sendPasswordResetNotice`           | Confirmation that the password was changed successfully        |
+| `sendRegistrationConfirmation`      | Confirmation that registration was completed                   |
 
-O projeto usa **Spring Profiles** para separar comportamento entre ambientes:
-
-| Profile        | Banco                                            | Log               |
-|----------------|--------------------------------------------------|-------------------|
-| `dev` (padrão) | PostgreSQL local via Docker Compose              | Verboso (`debug`) |
-| `prod`         | PostgreSQL configurado via variáveis de ambiente | Enxuto (`warn`)   |
-
-Variáveis de ambiente sensíveis (credenciais de banco, porta) possuem valores padrão seguros para
-desenvolvimento local e devem ser sobrescritas via variáveis de ambiente reais em produção — nunca
-commitadas no repositório. Consulte `.env.example` para a lista completa.
+In development, emails are captured by a Mailtrap virtual inbox (see the
+[Email in development](#email-in-development-mailtrap) section), allowing the rendered HTML to be
+inspected without anything actually being sent.
 
 ---
 
-## Como Rodar o Projeto
+## Data Modelling (implemented)
 
-### Pré-requisitos
+The initial schema (`V1__create_initial_schemas.sql`) is already defined and versioned via Flyway,
+covering the **User Accounts** (customers and staff) and **Product Catalogue** domains. Notable
+modelling decisions:
+
+- **Table inheritance (Class Table Inheritance)**: used both in `products`/`books` (extensible to
+  new product types) and in `users`/`customer_profiles`/`staff_profiles`.
+- **Rich associative entities**: N:N relationships that carry their own attributes (e.g.
+  `book_authors` with the author's role in the work; `product_languages` with the type of language
+  presence) are modelled as explicit entities, not as plain `ManyToMany`.
+- **Lifecycle via `status`**: `users.status` covers `PENDING_ACTIVATION`, `ACTIVE`,
+  `PENDING_DELETION`, `SUSPENDED` and `BANNED`, distinguishing accounts awaiting confirmation,
+  self-requested deletion (with a 90-day grace period) and administrative moderation, with no
+  ambiguity between these flows.
+- **Single-use tokens (`user_tokens`)**: a generic table (via `token_type`) for account activation,
+  password reset and (in future) email change. Stores only the code's SHA-256 hash, never the
+  plaintext value, with a mandatory expiry and a verification attempt count. A partial unique index
+  (`ux_user_token_one_active`, `WHERE token_status = 'ACTIVE'`) guarantees at the database level
+  that a user never has more than one active token at once — the application also serialises
+  concurrent issuances via a pessimistic lock, but the constraint is the last line of defence.
+- **UUID as `users`' primary key**: prevents account enumeration via URL. Catalogue entities keep a
+  sequential `BIGINT` for simplicity and indexing performance.
+- **Soft delete and retention**: users and products aren't physically removed in the common flow —
+  a status controls availability, preserving history and allowing controlled erasure only for
+  self-requested deletions that are already past the grace period.
+- **Postgres native full-text search**: a `GIN` index over
+  `to_tsvector('portuguese', title || description)` on `products`.
+- **Fields added only for a concrete business purpose**: decisions such as not including `sku`,
+  simultaneous multiple roles, or author biographical dates were deliberate — none of that data
+  feeds an existing screen or rule today.
+
+---
+
+## Environment Configuration (implemented)
+
+The project uses **Spring Profiles** to separate behaviour between environments:
+
+| Profile        | Database                                          | Log                |
+|-----------------|-----------------------------------------------------|-----------------------|
+| `dev` (default) | Local PostgreSQL via Docker Compose                 | Verbose (`debug`)    |
+| `prod`          | PostgreSQL configured via environment variables      | Lean (`warn`)         |
+
+Sensitive environment variables (database credentials, port) have safe default values for local
+development and must be overridden with real environment variables in production — never committed
+to the repository. See `.env.example` for the full list.
+
+---
+
+## Running the Project
+
+### Prerequisites
 
 - Java 21+
-- Maven 3.9+ (ou utilize o Maven Wrapper incluso: `./mvnw`)
+- Maven 3.9+ (or use the bundled Maven Wrapper: `./mvnw`)
 - Docker + Docker Compose
 
-### Passos
+### Steps
 
 ```bash
-# Clonar o repositório
-git clone https://github.com/<seu-usuario>/omnibus-api.git
+# Clone the repository
+git clone https://github.com/<your-username>/omnibus-api.git
 cd omnibus-api
 
-# Subir PostgreSQL e Redis local
+# Start PostgreSQL and Redis locally
 docker compose up -d
 
-# Configurar credenciais de e-mail (obrigatório para o fluxo de ativação de conta)
+# Configure email credentials (required for the account activation flow)
 cp .env.example .env
-# preencher MAIL_USERNAME/MAIL_PASSWORD com uma inbox de teste (ver seção abaixo)
+# fill in MAIL_USERNAME/MAIL_PASSWORD with a test inbox (see section below)
 
-# Rodar o pipeline completo de verificação
+# Run the full verification pipeline
 ./mvnw clean verify
 ```
 
-O comando `verify` compila o projeto, executa os testes automatizados, aplica as migrations do
-Flyway e valida a formatação e o estilo do código.
+The `verify` command compiles the project, runs the automated tests, applies the Flyway
+migrations, and validates code formatting and style.
 
-### E-mail em desenvolvimento (Mailtrap)
+### Email in development (Mailtrap)
 
-O envio de e-mails (código de ativação/reset, avisos de registro duplicado, senha alterada e
-confirmação de cadastro) usa Spring Mail com templates Thymeleaf. Em desenvolvimento, recomenda-se o
-**Mailtrap Email Testing (sandbox)** — os e-mails nunca saem de verdade, ficam capturados numa
-inbox virtual no painel do Mailtrap, permitindo testar com qualquer endereço (real ou fictício) sem
-restrição de destinatário e inspecionar o HTML renderizado de cada template:
+Sending emails (activation/reset codes, duplicate-registration notices, password-changed and
+registration-confirmation) uses Spring Mail with Thymeleaf templates. In development,
+**Mailtrap Email Testing (sandbox)** is recommended — emails never actually go out, they're
+captured in a virtual inbox in the Mailtrap dashboard, allowing testing with any address (real or
+made up) with no recipient restriction, and inspecting the rendered HTML of each template:
 
 ```
 MAIL_HOST=sandbox.smtp.mailtrap.io
 MAIL_PORT=2525
-MAIL_USERNAME=<usuário da sua inbox de teste>
-MAIL_PASSWORD=<senha da sua inbox de teste>
+MAIL_USERNAME=<your test inbox username>
+MAIL_PASSWORD=<your test inbox password>
 ```
 
-Atenção para não confundir com o produto **Email Sending** do Mailtrap (host
-`live.smtp.mailtrap.io`), que envia e-mails reais e restringe o destinatário em contas novas — as
-credenciais precisam ser especificamente da seção *Email Testing* do painel.
+Be careful not to confuse this with Mailtrap's **Email Sending** product (host
+`live.smtp.mailtrap.io`), which sends real emails and restricts the recipient on new accounts —
+the credentials need to come specifically from the *Email Testing* section of the dashboard.
 
-### Executando somente os testes
+### Running only the tests
 
-Para executar todos os testes:
+To run all the tests:
 
 ```bash
 ./mvnw test
 ```
 
-Para executar uma classe de teste específica:
+To run a specific test class:
 
 ```bash
 ./mvnw test -Dtest=PasswordMatchesValidatorTest
 ```
 
-### Acessando o banco localmente
+### Accessing the database locally
 
-Com o container rodando (`docker compose up -d`), conecte usando qualquer cliente Postgres (DBeaver,
+With the container running (`docker compose up -d`), connect using any Postgres client (DBeaver,
 TablePlus, `psql`):
 
 - **Host**: `localhost`
-- **Porta**: `5432`
-- **Banco**: `omnibus`
-- **Usuário**: `postgres`
-- **Senha**: `postgres`
+- **Port**: `5432`
+- **Database**: `omnibus`
+- **User**: `postgres`
+- **Password**: `postgres`
 
-### Inspecionando o Redis localmente
+### Inspecting Redis locally
 
 ```bash
 docker exec -it omnibus-redis redis-cli
 ```
 
-Dentro do prompt, `KEYS *` lista as chaves ativas (ex.: contadores de rate limit de emissão de
-código). Alternativamente, o [RedisInsight](https://redis.io/insight/) oferece uma interface visual,
-conectando em `localhost:6379` sem senha.
+Inside the prompt, `KEYS *` lists the active keys (e.g. code-issuance rate-limit counters).
+Alternatively, [RedisInsight](https://redis.io/insight/) offers a visual interface, connecting to
+`localhost:6379` with no password.
 
 ---
 
-## Integração Contínua (CI)
+## Continuous Integration (CI)
 
-O projeto utiliza **GitHub Actions** para executar automaticamente as verificações de qualidade a
-cada `push` e `pull request` direcionados para a branch `main`.
+The project uses **GitHub Actions** to automatically run quality checks on every `push` and
+`pull request` targeting the `main` branch.
 
-O pipeline é dividido em três etapas:
+The pipeline is split into three stages:
 
 ```text
                          ┌── Tests ───────────────┐
@@ -521,82 +518,81 @@ Push / Pull Request ─────┤                         ├──→ Buil
 
 ### Tests
 
-Executa:
+Runs:
 
 ```bash
 ./mvnw test
 ```
 
-Responsável por garantir que os testes automatizados estejam passando antes da conclusão do
-pipeline.
+Responsible for ensuring the automated tests pass before the pipeline concludes.
 
 ### Code Quality
 
-Executa as verificações de:
+Runs the following checks:
 
-- **Spotless** — valida a formatação do código seguindo o Google Java Format.
-- **Checkstyle** — audita o código contra as regras de estilo configuradas.
+- **Spotless** — validates code formatting against the Google Java Format.
+- **Checkstyle** — audits the code against the configured style rules.
 
 ### Build
 
-Executado somente depois que **Tests** e **Code Quality** forem concluídos com sucesso:
+Runs only after **Tests** and **Code Quality** complete successfully:
 
 ```bash
 ./mvnw clean package -DskipTests
 ```
 
-Dessa forma, uma falha nos testes ou nas verificações de qualidade impede que o build final seja
-considerado válido.
+This way, a failure in the tests or the quality checks prevents the final build from being
+considered valid.
 
-> O CI é uma camada de segurança do repositório. A mesma validação pode e deve ser executada
-> localmente antes do commit com `./mvnw clean verify`.
+> CI is a safety net for the repository. The same validation can and should be run locally before
+> committing, with `./mvnw clean verify`.
 
 ---
 
-## Qualidade de Código e Testes
+## Code Quality and Testing
 
-O projeto possui um pipeline de qualidade integrado ao build (`mvn verify`) e executado
-automaticamente via **GitHub Actions** a cada push/PR para `main`.
+The project has a quality pipeline integrated into the build (`mvn verify`), run automatically via
+**GitHub Actions** on every push/PR to `main`.
 
-### Formatação e estilo
+### Formatting and style
 
-- **Spotless** — valida a formatação do código seguindo o Google Java Format (`mvn spotless:apply`
-  para aplicar as correções).
-- **Checkstyle** — audita o código contra o guia de estilo do Google e **falha o build** em caso de
-  violação (`mvn checkstyle:check`).
+- **Spotless** — validates code formatting against the Google Java Format (`mvn spotless:apply`
+  to apply the fixes).
+- **Checkstyle** — audits the code against Google's style guide and **fails the build** on any
+  violation (`mvn checkstyle:check`).
 
-### Testes automatizados
+### Automated testing
 
-- **JUnit 5** — framework utilizado para os testes automatizados.
-- **Mockito** — utilizado para isolar dependências e testar componentes individualmente.
-- **Testes unitários** — utilizados principalmente para regras de domínio, services e validadores,
-  evitando dependência desnecessária de infraestrutura externa.
-- **Testes de contexto** — utilizados quando é necessário verificar a inicialização e integração do
-  contexto Spring.
+- **JUnit 5** — the framework used for the automated tests.
+- **Mockito** — used to isolate dependencies and test components individually.
+- **Unit tests** — used mainly for domain rules, services and validators, avoiding unnecessary
+  dependence on external infrastructure.
+- **Context tests** — used when it's necessary to verify the Spring context's start-up and
+  integration.
 
-A Arquitetura Hexagonal permite manter grande parte dos testes independente do Spring Context e do
-banco de dados, reduzindo o tempo de execução e tornando os testes mais determinísticos.
+Hexagonal Architecture allows most of the tests to remain independent of the Spring context and
+the database, reducing execution time and making the tests more deterministic.
 
 ---
 
 ## Roadmap
 
-- [x] **Etapa 1** — Modelagem de dados (PostgreSQL + Flyway), configuração de ambiente, arquitetura
-  hexagonal definida, CI e tooling de qualidade
-- [x] **Etapa 2** — Domínio, portas, adapters de persistência, DTOs, validação e testes unitários
-  para `Customer` — registro (sem enumeração de e-mail) e testes de `RegisterCustomerService`
-- [ ] **Etapa 3** — Autenticação e autorização com Spring Security + JWT — *em andamento: login,
-  `JwtAuthenticationFilter`, `RoleHierarchy`, ativação de conta por código OTP (com rate limit via
-  Redis), reenvio de código com cooldown, reset de senha completo (solicitar código, verificar,
-  confirmar nova senha com token de escopo restrito), notificações por e-mail via templates
-  Thymeleaf (OTP, registro duplicado, senha alterada, cadastro concluído) e emissão de token
-  pós-ativação prontos e testados; ainda faltam: criação de `Staff` (restrita a `ADMIN`), troca de
-  e-mail e refresh token*
-- [ ] **Etapa 4** — Carrinho de compras e Pedidos
-- [ ] **Etapa 5** — Wishlist com notificação de reposição de estoque
+- [x] **Stage 1** — Data modelling (PostgreSQL + Flyway), environment configuration, hexagonal
+  architecture defined, CI and quality tooling
+- [x] **Stage 2** — Domain, ports, persistence adapters, DTOs, validation and unit tests for
+  `Customer` — registration (with no email enumeration) and `RegisterCustomerService` tests
+- [ ] **Stage 3** — Authentication and authorisation with Spring Security + JWT — *in progress:
+  login, `JwtAuthenticationFilter`, `RoleHierarchy`, account activation via OTP code (rate-limited
+  via Redis), code resend with cooldown, complete password reset (request code, verify, confirm
+  new password with a scope-restricted token), email notifications via Thymeleaf templates (OTP,
+  duplicate registration, password changed, registration completed) and post-activation token
+  issuance all done and tested; still missing: `Staff` creation (restricted to `ADMIN`), email
+  change and refresh tokens*
+- [ ] **Stage 4** — Shopping cart and Orders
+- [ ] **Stage 5** — Wishlist with restock notifications
 
 ---
 
-## Licença
+## Licence
 
-Este projeto está sob a licença MIT.
+This project is licensed under the MIT Licence.

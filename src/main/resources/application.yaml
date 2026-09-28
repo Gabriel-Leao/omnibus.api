@@ -27,6 +27,12 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          enabled: false
+
 jwt:
   secret: ${JWT_SECRET:change-this-to-a-long-random-secret-in-production-please}
   access-token-expiration-minutes: ${JWT_ACESS_TOKEN_EXPIRATION_MINUTES:60}

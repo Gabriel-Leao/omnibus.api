@@ -1,0 +1,14 @@
+package br.com.leao.gabriel.omnibus.kernel.adapter.domain.exception;
+
+/**
+ * Base exception for forbidden domain operations.
+ */
+public abstract class ForbiddenException extends DomainException {
+
+  /**
+   * Handles the ForbiddenException operation.
+   */
+  protected ForbiddenException(String message) {
+    super(message);
+  }
+}

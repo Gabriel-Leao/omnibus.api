@@ -3,8 +3,7 @@
 A RESTful e-commerce API for comic books, built with a focus on production-grade architecture,
 sound software engineering practices, and a reproducible code quality pipeline.
 
-> Portfolio project developed by [Gabriel Leão](https://github.com/) as part of his job search for
-> a Full Stack / Back-end Java Developer role.
+> Portfolio project developed by [Gabriel Leão](https://github.com/).
 
 ---
 
@@ -21,23 +20,24 @@ the [Roadmap](#roadmap)).
 
 ## Technology Stack
 
-| Category               | Technology                                                            |
-|-------------------------|-----------------------------------------------------------------------|
-| Language                | Java 21                                                               |
-| Framework               | Spring Boot 4.0.7                                                     |
-| Persistence             | Spring Data JPA + Hibernate                                           |
-| Database                | PostgreSQL 17 (via Docker Compose)                                    |
-| Cache / Rate Limiting   | Redis 7 (via Docker Compose)                                          |
-| Migrations              | Flyway                                                                |
-| Security                | Spring Security + JWT (JJWT)                                          |
-| Email                   | Spring Mail + Thymeleaf (HTML templates), Mailtrap in dev              |
-| API Documentation       | SpringDoc OpenAPI (Swagger UI)                                        |
-| DTO ↔ Entity Mapping    | MapStruct                                                             |
-| Boilerplate             | Lombok                                                                |
-| Build                   | Maven                                                                 |
-| Code Quality            | Checkstyle (Google Style) + Spotless                                  |
-| CI                      | GitHub Actions (build, tests, Checkstyle, Spotless on every push/PR)  |
-| Testing                 | JUnit 5 + Mockito                                                     |
+| Category              | Technology                                                           |
+|-----------------------|----------------------------------------------------------------------|
+| Language              | Java 21                                                              |
+| Framework             | Spring Boot 4.0.7                                                    |
+| Persistence           | Spring Data JPA + Hibernate                                          |
+| Database              | PostgreSQL 17 (via Docker Compose)                                   |
+| Cache / Rate Limiting | Redis 7 (via Docker Compose)                                         |
+| Migrations            | Flyway                                                               |
+| Security              | Spring Security + JWT (JJWT)                                         |
+| Modularity            | Spring Modulith (4.1.1)                                              |
+| Email                 | Spring Mail + Thymeleaf (HTML templates), Mailtrap in dev            |
+| API Documentation     | SpringDoc OpenAPI (Swagger UI)                                       |
+| DTO ↔ Entity Mapping  | MapStruct                                                            |
+| Boilerplate           | Lombok                                                               |
+| Build                 | Maven                                                                |
+| Code Quality          | Checkstyle (Google Style) + Spotless                                 |
+| CI                    | GitHub Actions (build, tests, Checkstyle, Spotless on every push/PR) |
+| Testing               | JUnit 5 + Mockito                                                    |
 
 ---
 
@@ -45,11 +45,11 @@ the [Roadmap](#roadmap)).
 
 With the application running, interactive documentation is available at:
 
-| Resource                      | URL                                                                              |
-|--------------------------------|------------------------------------------------------------------------------------|
-| Swagger UI                    | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)   |
-| OpenAPI Specification (JSON)  | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)           |
-| OpenAPI Specification (YAML)  | [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml) |
+| Resource                     | URL                                                                              |
+|------------------------------|----------------------------------------------------------------------------------|
+| Swagger UI                   | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)   |
+| OpenAPI Specification (JSON) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)           |
+| OpenAPI Specification (YAML) | [http://localhost:8080/v3/api-docs.yaml](http://localhost:8080/v3/api-docs.yaml) |
 
 The specification documents the available endpoints, request and response DTOs, payload examples,
 validation rules and the standardised error format. Protected endpoints declare the `bearerAuth`
@@ -69,93 +69,136 @@ token is not accepted to confirm a new password.
 
 ---
 
-## Architecture: Hexagonal (Ports & Adapters)
+## Architecture: Modular Monolith (Spring Modulith) + Hexagonal within each module
 
-The project adopts **Hexagonal Architecture** instead of the traditional layered MVC. The core
-idea: the **business domain stays isolated at the centre**, with no dependency on frameworks
-(Spring, JPA, HTTP), and communicates with the outside world exclusively through
-**interfaces (ports)**. Databases, REST, email and security are treated as infrastructure details —
-pluggable **adapters** at the edges of the system.
+The application is a single deployable (one Maven module, one JAR), internally split into **Spring
+Modulith** application modules whose boundaries are enforced by a test (`ModularityTests`), not just
+by convention. Each module keeps its own internal **Hexagonal
+architecture** (ports & adapters); Modulith governs the boundary *between* modules, hexagonal
+governs the structure *inside* one.
 
 ### Why this choice
 
-- **Genuine business-rule isolation**: the domain can be tested without starting the Spring
-  Context, without a database, without heavy mocks.
-- **Swapping infrastructure without touching the domain**: replacing Postgres with another
-  database, REST with GraphQL, or the email provider, shouldn't require changing a single line of
-  business logic.
-- **A deliberate learning decision**: it's a more advanced pattern than traditional layering, with
-  real trade-offs (more classes, more mapping) — part of my technical growth process.
+- **Boundaries that are actually checked**: package-by-feature alone is just folders — nothing
+  stops a future module from reaching into another's internals under deadline pressure.
+  `ApplicationModules.verify()` fails the build the moment that happens.
+- **A migration path, not a rewrite**: everything still runs as one process with one database — no
+  network hop, no distributed-transaction problem — while the seams where a service boundary would
+  eventually go are already explicit and tested.
+- **Genuine business-rule isolation** (inherited from Hexagonal, applied per module): each module's
+  domain can be tested without starting the Spring context, without a database, without heavy
+  mocks.
+- **A deliberate learning decision**: intentionally more structure than the project currently
+  strictly needs at this size — the payoff is insurance against the shortcuts that show up once
+  there are three or more modules and a deadline.
 
-### Dependency rule
+### Modules
 
-Dependency arrows always point **from the outside in**: adapters know about the domain; the domain
-never knows about the adapters.
+| Module         | Type   | Responsibility                                                                                                                                                                                                                                                  | Depends on                                 |
+|----------------|--------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
+| `kernel`       | `OPEN` | Cross-cutting infrastructure with no business knowledge: the `DomainException` hierarchy, `GlobalExceptionHandler`, `TraceIdFilter`, `@EnumValue` validation, JWT **validation** (`JwtAuthenticationFilter`, `JwtTokenParser`), `SecurityConfig`, `AsyncConfig` | *(shared — see below)*                     |
+| `identity`     | closed | Customer/Staff accounts, authentication, OTP issuance/verification, JWT **issuance** (`JwtTokenIssuerAdapter`) — publishes events, never calls another module directly                                                                                          | `kernel` (implicit)                        |
+| `notification` | closed | Turns identity's events into emails (SMTP + Thymeleaf) — owns its own copy, subject lines and templates                                                                                                                                                         | `kernel` (implicit), `identity.event` only |
+
+`kernel` is declared once as a shared module (`@Modulithic(sharedModules = "kernel")` on
+`OmnibusApplication`), so `identity` and `notification` get access to it without listing it in
+their own `@ApplicationModule(allowedDependencies = ...)`. It's marked `type = Type.OPEN`
+deliberately: it has no business rules to protect behind a `@NamedInterface`, and everything in it
+is meant to be used as-is by any module.
+
+### Dependency rule between modules
 
 ```text
-Adapter IN  →  Application  →  Domain  ←  Application  ←  Adapter OUT
-(Controller,                  (Model +                    (JPA, JWT,
- JWT Filter)                   Ports)                      Email, UserDetails)
+kernel  ←  identity  →  (events)  →  notification
 ```
+
+`kernel` depends on nothing. `identity` depends only on `kernel`. `notification` depends only on
+`kernel` and on `identity.event` — a `@NamedInterface`-exposed package of plain event records
+(`OtpIssuedEvent`, `CustomerRegisteredEvent`, `DuplicateRegistrationAttemptedEvent`,
+`PasswordResetCompletedEvent`). `identity` never imports anything from `notification`, and
+`notification` never imports `identity`'s domain model, ports, or persistence — only the event
+records. Concretely: `identity`'s application services call
+`ApplicationEventPublisher.publishEvent(...)` instead of an `EmailSenderPort`-style call;
+`notification`'s `IdentityNotificationListener` (`@ApplicationModuleListener`) reacts to those
+events and decides how to turn them into an email — including owning the static subject lines that
+aren't derived from identity's domain (only `OtpIssuedEvent`'s subject/tag are, since they come
+from `OtpType`, which only `identity` knows about).
+
+### Verifying the boundary
+
+```java
+class ModularityTests {
+
+  ApplicationModules modules = ApplicationModules.of(OmnibusApplication.class);
+
+  @Test
+  void verifiesModularStructure() {
+    modules.verify();
+  }
+}
+```
+
+This is not a smoke test — it's the acceptance criterion for every module-boundary decision
+described above. If a future change makes `notification` import `identity.domain` directly, or
+makes `kernel` depend on `identity`, this test fails with the specific offending reference, before
+the change ever reaches a PR.
 
 ### Package structure
 
 ```text
 src/main/java/br/com/leao/gabriel/omnibus/
-├── domain/
-│   ├── model/                      # Pure domain entities (no @Entity, no Spring)
-│   ├── exception/                  # Business exceptions, no knowledge of HTTP
-│   └── port/
-│       ├── in/                     # Use case interfaces
-│       └── out/                    # Infrastructure interfaces (e.g. EmailSenderPort)
+├── OmnibusApplication.java          # @Modulithic(sharedModules = "kernel")
 │
-├── application/
-│   └── service/                    # Use case implementations (@Service), orchestrates the domain
+├── kernel/                          # @ApplicationModule(type = OPEN)
+│   ├── adapter/
+│   │   ├── domain/exception/        # DomainException hierarchy (NotFoundException, ConflictException, ...)
+│   │   ├── in/web/
+│   │   │   ├── exception/           # GlobalExceptionHandler (@RestControllerAdvice)
+│   │   │   ├── filter/              # TraceIdFilter
+│   │   │   ├── security/            # JwtAuthenticationFilter (validation only)
+│   │   │   └── validation/enumvalue/
+│   │   └── out/security/            # JwtTokenParser (validation only)
+│   └── config/                      # SecurityConfig, AsyncConfig, OpenApiConfig
 │
-├── adapter/
-│   ├── in/
-│   │   └── web/
-│   │       ├── controller/         # REST controllers
-│   │       ├── dto/request/        # Input DTOs, with Bean Validation
-│   │       ├── mapper/             # Domain → response DTO
-│   │       ├── validation/         # Custom constraints (MinimumAge, EnumValue, PasswordMatches)
-│   │       └── exception/          # GlobalExceptionHandler (@RestControllerAdvice)
-│   └── out/
-│       ├── persistence/
-│       │   ├── entity/             # JPA @Entity — separate from the domain model
-│       │   ├── repository/         # Spring Data JPA interfaces
-│       │   └── *PersistenceAdapter.java   # implements the output ports (@Component)
-│       ├── notification/
-│       │   ├── SmtpEmailSenderAdapter.java  # implements EmailSenderPort via JavaMailSender
-│       │   └── EmailTemplateRenderer.java   # renders the Thymeleaf email templates
-│       └── security/
-│           ├── UserDetailsServiceImpl.java
-│           └── JwtService.java
+├── identity/                        # @ApplicationModule
+│   ├── domain/
+│   │   ├── model/                   # Customer, Staff, UserToken, OtpType, ...
+│   │   ├── exception/                # Concrete business exceptions, extend kernel's base types
+│   │   └── port/out/                # CustomerRepositoryPort, TokenIssuerPort, ...
+│   ├── event/                       # @NamedInterface("events") — the only thing notification may import
+│   ├── application/
+│   │   ├── usecase/                 # Input port interfaces
+│   │   ├── service/                 # Use case implementations — publish events, never call notification
+│   │   └── factory/
+│   └── adapter/
+│       ├── in/web/                  # Controllers, DTOs, validation (MinimumAge, PasswordMatches)
+│       └── out/
+│           ├── persistence/         # JPA entities, repositories, *PersistenceAdapter
+│           └── security/            # JwtTokenIssuerAdapter (issuance only), UserDetailsServiceImpl, ...
 │
-└── config/
-    ├── SecurityConfig.java         # Wiring/beans — outside the "pure" hexagonal structure
-    ├── AsyncConfig.java            # Configuration of the executor used by @Async sends
-    └── ThymeleafEmailConfig.java   # Template engine dedicated to email rendering
+└── notification/                    # @ApplicationModule
+    ├── application/                 # IdentityNotificationListener (@ApplicationModuleListener)
+    └── adapter/out/                 # EmailNotifier, EmailTemplateRenderer, ThymeleafEmailConfig
 ```
 
-### Wiring convention
+### Why JWT is split between `kernel` and `identity`
 
-Use case implementations and adapters are annotated directly (`@Service`, `@Component`,
-`@Repository`), with no manual configuration classes (`@Configuration` + `@Bean`) for use case
-wiring. `@Configuration` is reserved for genuinely infrastructural beans (`PasswordEncoder`,
-`SecurityFilterChain`, Thymeleaf's `TemplateEngine`, etc.).
+JWT touches two genuinely different concerns, so it's split rather than owned wholesale by one
+module:
 
-### Convention adopted for Spring Security components
+| Class                                                    | Concern                                                  | Module     | Rationale                                                                                                                         |
+|----------------------------------------------------------|----------------------------------------------------------|------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `JwtTokenIssuerAdapter`                                  | **Issuing** tokens (implements `TokenIssuerPort`)        | `identity` | Every caller of `TokenIssuerPort` lives in `identity`'s application services — nothing else ever issues a token.                  |
+| `JwtTokenParser`, `JwtAuthenticationFilter`              | **Validating** tokens on every request                   | `kernel`   | Every module's endpoints sit behind the same filter chain — this is cross-cutting infrastructure, not identity's private concern. |
+| `SecurityConfig`                                         | `SecurityFilterChain`, CORS, method security             | `kernel`   | App-wide HTTP security wiring.                                                                                                    |
+| `UserDetailsServiceImpl`, `BcryptPasswordEncoderAdapter` | Looks up/encodes credentials for a specific account type | `identity` | Concerned with `Customer`/`Staff`, not generic infrastructure.                                                                    |
 
-Spring Security wasn't designed with Hexagonal in mind, so some classes require an explicit
-decision about where they belong:
-
-| Class                    | Role                                           | Location                    | Rationale                                                                                            |
-|---------------------------|-------------------------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------|
-| `UserDetailsServiceImpl`  | Looks up the user in the database for authentication | `adapter/out/security/`    | It's called *by* Spring Security to fetch external data — from the domain's point of view, that's an output concern. |
-| `JwtService`              | Generates/validates the token                   | `adapter/out/security/`    | A technical infrastructure concern, not a domain business rule.                                        |
-| `JwtAuthenticationFilter` | Intercepts the HTTP request and extracts the token | `adapter/in/web/security/` | Reacts to an incoming request — it's an input concern.                                                 |
-| `SecurityConfig`          | `SecurityFilterChain` configuration              | `config/`                   | Pure infrastructure wiring; forcing it into a port/adapter would create more confusion than clarity.   |
+The one thing that made the split safe: `JwtTokenParser.extractPurpose(Claims)` returns a plain
+`String`, not identity's `OtpType` enum. Early on, `kernel`'s filter compared the purpose claim
+against `OtpType.PASSWORD_RESET` directly — which meant `kernel` had a compile-time dependency on
+`identity`, defeating the point of `kernel` being shared/dependency-free. Comparing raw strings
+(`"PASSWORD_RESET".equals(purpose)`) keeps identical runtime behaviour with zero cross-module
+coupling.
 
 > **Temporary note**: `/auth/**` and `/password-reset` / `/password-reset/verify` remain open
 > (`permitAll`), since they're part of the authentication flow itself. The exception is
@@ -166,6 +209,7 @@ decision about where they belong:
 > available for use on service/controller methods. The remaining routes stay open
 > (`anyRequest().permitAll()`) simply because the catalogue and order modules don't exist yet — the
 > whitelist will be tightened route by route as each module is implemented.
+
 
 ---
 
@@ -191,8 +235,8 @@ used for `products`/`books`.
 - **Domain**: `UserAccount` (abstract) holds shared validation (e.g. consistency between `status`
   and `deletedAt`); `Customer` and `Staff` extend it, each with its own rules and fields.
 - **JPA**: `UserJpaEntity` (abstract, `@Inheritance(JOINED)`) maps the base table;
-  `CustomerJpaEntity`/`StaffJpaEntity` map the child tables, with the discriminator
-  (`account_type`) managed automatically by Hibernate.
+  `CustomerJpaEntity`/`StaffJpaEntity` map the child tables, with the discriminator (`account_type`)
+  managed automatically by Hibernate.
 - **Request DTOs**: `RegisterCustomerRequest` and `RegisterStaffRequest` are independent *records*,
   with no inheritance between them — the handful of shared fields (`name`, `email`, `password`) are
   deliberately duplicated, avoiding a forced abstraction over a small set of fields.
@@ -200,7 +244,8 @@ used for `products`/`books`.
 ### Custom validation (Bean Validation)
 
 Besides the standard annotations (`@NotBlank`, `@Email`, `@Size`), the project defines reusable
-constraints in `adapter/in/web/validation/`:
+constraints (`@EnumValue` in `kernel`, `@MinimumAge` and `@PasswordMatches` in
+`identity/adapter/in/web/validation/`):
 
 - **`@MinimumAge`**: validates a minimum age from a date of birth, without persisting a calculated
   age.
@@ -247,10 +292,12 @@ Login and token issuance follow the same ports/adapters separation as the rest o
   account (checking `Customer` and then `Staff`, since the email alone doesn't indicate the type),
   validates the password and the status (`ACTIVE`), and delegates token issuance to
   `TokenIssuerPort` — an output port that has no idea the token issued is specifically a JWT.
-- **`JwtTokenIssuerAdapter`** and **`JwtTokenParser`** (`adapter/out/security/`) contain the entire
-  dependency on `io.jsonwebtoken` — if the token mechanism changed tomorrow, not a single line of
+- **`JwtTokenIssuerAdapter`** (`identity/adapter/out/security/`) and **`JwtTokenParser`**
+  (`kernel/adapter/out/security/`) contain the entire dependency on `io.jsonwebtoken` — if the token
+  mechanism changed tomorrow, not a single line of
   the domain or application layer would need to change.
-- **`JwtAuthenticationFilter`** (`adapter/in/web/security/`) intercepts every request, validates
+- **`JwtAuthenticationFilter`** (`kernel/adapter/in/web/security/`) intercepts every request,
+  validates
   the token from the `Authorization` header and populates the `SecurityContext`, enabling
   `@PreAuthorize` on services/controllers.
 - **`RoleHierarchy`** (`SecurityConfig`) declares that `ADMIN` implies `EDITOR`, which implies
@@ -275,15 +322,16 @@ sent — the real outcome only arrives by email.
 
 ### Code verification (OTP): account activation and password reset
 
-Instead of an activation link, the account is confirmed (and the password reset) using a
-**6-digit numeric code** (friendlier on mobile, and it avoids issues with corporate email scanners
+Instead of an activation link, the account is confirmed (and the password reset) using a **6-digit
+numeric code** (friendlier on mobile, and it avoids issues with corporate email scanners
 automatically "clicking" links). The mechanism is shared across the account activation, password
 reset and (in future) email change flows, all backed by the same `user_tokens` table:
 
 - **`UserToken`** (domain) stores only the code's **SHA-256 hash** — never the plaintext value —
   along with its type (`ACCOUNT_ACTIVATION`, `PASSWORD_RESET`, `EMAIL_CHANGE`), expiry, attempt
   count and whether it's already been used.
-- **`VerificationOtpIssuer`** (shared component in `application/service/`) centralises issuance:
+- **`VerificationOtpIssuer`** (shared component in `identity/application/service/`) centralises
+  issuance:
   checks the daily limit via Redis, revokes any of the user's still-active tokens (via a
   `SELECT ... FOR UPDATE` to serialise concurrent issuances instead of racing for the
   `ux_user_token_one_active` unique index), generates the new code, persists the hash and returns
@@ -306,7 +354,8 @@ reset and (in future) email change flows, all backed by the same `user_tokens` t
 - **`SendOtpService`** unifies (re)sending a code for all three OTP types: checks that the customer
   exists and is in the right state for the requested type (`Customer.canUseOtp`/`isEligible`),
   honours the **60-second cooldown** between issuances (`UserToken.isResendAllowed`), delegates
-  issuance to `VerificationOtpIssuer` and sending to `EmailSenderPort`. It's the service behind
+  issuance to `VerificationOtpIssuer` and publishes an `OtpIssuedEvent` for `notification` to send.
+  It's the service behind
   `POST /auth/resend-activation` and `POST /password-reset`.
 - **`AuthenticatedPrincipalFactory`** centralises building an `AuthenticatedPrincipal` from a
   `Customer` or a `Staff`, reused by both `AuthenticationService` (login) and
@@ -334,32 +383,40 @@ relationship to other entities — lives in Redis.
 
 ## Email notifications
 
-All email communication in the account flow goes through **`EmailSenderPort`** (a domain output
-port), implemented by **`SmtpEmailSenderAdapter`** via `JavaMailSender`. The domain and application
-layer have no idea sending happens over SMTP, nor how the email body is assembled — they just call
-the port with the necessary data.
+Email is entirely owned by the `notification` module and reached via **application events**, not a
+port `identity` calls directly. `identity`'s application services publish a plain event
+(`OtpIssuedEvent`, `CustomerRegisteredEvent`, `DuplicateRegistrationAttemptedEvent`,
+`PasswordResetCompletedEvent` — see [Modules](#modules)) through Spring's
+`ApplicationEventPublisher`; `identity` has no idea an email gets sent as a result, let alone how.
 
-- **`SmtpEmailSenderAdapter`** (`adapter/out/notification/`) builds the `MimeMessage` and delegates
-  HTML rendering to `EmailTemplateRenderer`. Every method is `@Async`: the endpoints that trigger
-  them have already responded to the client before sending happens, ensuring response time doesn't
-  vary depending on whether an email is actually sent or not — a send failure is only logged, never
-  propagated back to an HTTP request that's already completed.
-- **`EmailTemplateRenderer`** processes the Thymeleaf templates under
-  `src/main/resources/templates/email/`, using `layout.html` as the base fragment (header, footer
-  and a context tag per email type) and a specific template per message type: `otp.html`,
-  `duplicate-registration.html`, `password-reset.html` and `registration-confirmation.html`.
-- **`ThymeleafEmailConfig`** (`config/`) configures a `TemplateEngine`/`ITemplateResolver`
-  dedicated to email rendering, isolated from Spring MVC's default resolver.
-- **`AsyncConfig`** (`config/`) defines the executor used by the `@Async` sending methods.
+- **`IdentityNotificationListener`** (`notification/application/`, `@ApplicationModuleListener` per
+  event) is the only class in `notification` that imports anything from `identity` — and it only
+  imports the event records. It decides the template and, for the three events with no
+  identity-specific copy, the subject line too. `OtpIssuedEvent`'s subject/tag are the exception:
+  they're resolved in `identity` from `OtpType` before publishing, since only `identity` can call
+  methods on its own enum.
+- **`EmailNotifier`** (`notification/adapter/out/`) builds the `MimeMessage` via `JavaMailSender`
+  and delegates HTML rendering to `EmailTemplateRenderer`. It's `@Async`: listeners already run
+  after the publishing transaction has committed, so sending never blocks the original request — a
+  send failure is only logged.
+- **`EmailTemplateRenderer`** / **`ThymeleafEmailConfig`** (`notification/adapter/out/`) render the
+  templates under `src/main/resources/notification/templates/email/`, using `layout.html` as the
+  shared base fragment and a subfolder per originating module for the content templates —
+  `identity/otp.html`, `identity/duplicate-registration.html`, `identity/password-reset.html`,
+  `identity/registration-confirmation.html`. `layout.html` stays outside that subfolder since it's
+  generic chrome, not identity's; when another module starts sending email, it gets its own
+  `email/<module>/` subfolder alongside `identity/`, with no risk of collision.
+- **`AsyncConfig`** (`kernel/config/`) defines the executor used by `@Async` sends — kept in
+  `kernel` since it's generic thread-pool configuration, not specific to email.
 
-Email types sent today:
+Events published today:
 
-| Method                             | When it's triggered                                         |
-|--------------------------------------|-----------------------------------------------------------------|
-| `sendOtp`                           | Code issuance (account activation or password reset)          |
-| `sendDuplicateRegistrationNotice`   | Registration attempt with an already-registered email          |
-| `sendPasswordResetNotice`           | Confirmation that the password was changed successfully        |
-| `sendRegistrationConfirmation`      | Confirmation that registration was completed                   |
+| Event                                 | When it's published                                     |
+|---------------------------------------|---------------------------------------------------------|
+| `OtpIssuedEvent`                      | Code issuance (account activation or password reset)    |
+| `DuplicateRegistrationAttemptedEvent` | Registration attempt with an already-registered email   |
+| `PasswordResetCompletedEvent`         | Confirmation that the password was changed successfully |
+| `CustomerRegisteredEvent`             | Confirmation that registration/activation was completed |
 
 In development, emails are captured by a Mailtrap virtual inbox (see the
 [Email in development](#email-in-development-mailtrap) section), allowing the rendered HTML to be
@@ -405,10 +462,10 @@ modelling decisions:
 
 The project uses **Spring Profiles** to separate behaviour between environments:
 
-| Profile        | Database                                          | Log                |
-|-----------------|-----------------------------------------------------|-----------------------|
-| `dev` (default) | Local PostgreSQL via Docker Compose                 | Verbose (`debug`)    |
-| `prod`          | PostgreSQL configured via environment variables      | Lean (`warn`)         |
+| Profile         | Database                                        | Log               |
+|-----------------|-------------------------------------------------|-------------------|
+| `dev` (default) | Local PostgreSQL via Docker Compose             | Verbose (`debug`) |
+| `prod`          | PostgreSQL configured via environment variables | Lean (`warn`)     |
 
 Sensitive environment variables (database credentials, port) have safe default values for local
 development and must be overridden with real environment variables in production — never committed
@@ -448,8 +505,8 @@ migrations, and validates code formatting and style.
 ### Email in development (Mailtrap)
 
 Sending emails (activation/reset codes, duplicate-registration notices, password-changed and
-registration-confirmation) uses Spring Mail with Thymeleaf templates. In development,
-**Mailtrap Email Testing (sandbox)** is recommended — emails never actually go out, they're
+registration-confirmation) uses Spring Mail with Thymeleaf templates. In development, **Mailtrap
+Email Testing (sandbox)** is recommended — emails never actually go out, they're
 captured in a virtual inbox in the Mailtrap dashboard, allowing testing with any address (real or
 made up) with no recipient restriction, and inspecting the rendered HTML of each template:
 
@@ -567,8 +624,17 @@ The project has a quality pipeline integrated into the build (`mvn verify`), run
 - **Mockito** — used to isolate dependencies and test components individually.
 - **Unit tests** — used mainly for domain rules, services and validators, avoiding unnecessary
   dependence on external infrastructure.
+- **Module boundary test** — `ModularityTests` runs `ApplicationModules.verify()` and fails on any
+  illegal dependency between `kernel`, `identity` and `notification`.
 - **Context tests** — used when it's necessary to verify the Spring context's start-up and
   integration.
+
+The test tree mirrors the main source one package for package (`identity/`, `kernel/`,
+`notification/`), so a class and its test always share a package. Services that used to call an
+email port are now tested by asserting the event they publish (for example
+`verify(eventPublisher).publishEvent(new OtpIssuedEvent(...))`), and `notification` is tested from
+the other side: `IdentityNotificationListenerTest` builds plain event records and verifies the
+resulting `EmailNotifier` call, with no identity domain type involved.
 
 Hexagonal Architecture allows most of the tests to remain independent of the Spring context and
 the database, reducing execution time and making the tests more deterministic.
@@ -581,6 +647,8 @@ the database, reducing execution time and making the tests more deterministic.
   architecture defined, CI and quality tooling
 - [x] **Stage 2** — Domain, ports, persistence adapters, DTOs, validation and unit tests for
   `Customer` — registration (with no email enumeration) and `RegisterCustomerService` tests
+- [x] **Modular monolith migration** — code reorganised into `kernel`, `identity` and
+  `notification` Spring Modulith modules; email decoupled from identity through application events;
 - [ ] **Stage 3** — Authentication and authorisation with Spring Security + JWT — *in progress:
   login, `JwtAuthenticationFilter`, `RoleHierarchy`, account activation via OTP code (rate-limited
   via Redis), code resend with cooldown, complete password reset (request code, verify, confirm
@@ -588,6 +656,7 @@ the database, reducing execution time and making the tests more deterministic.
   duplicate registration, password changed, registration completed) and post-activation token
   issuance all done and tested; still missing: `Staff` creation (restricted to `ADMIN`), email
   change and refresh tokens*
+  boundaries verified by `ModularityTests`
 - [ ] **Stage 4** — Shopping cart and Orders
 - [ ] **Stage 5** — Wishlist with restock notifications
 

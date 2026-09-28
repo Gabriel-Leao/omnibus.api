@@ -206,6 +206,21 @@
       <groupId>org.springframework.boot</groupId>
     </dependency>
 
+    <dependency>
+      <artifactId>spring-modulith-starter-core</artifactId>
+      <groupId>org.springframework.modulith</groupId>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-modulith-starter-jdbc</artifactId>
+      <groupId>org.springframework.modulith</groupId>
+    </dependency>
+
+    <dependency>
+      <artifactId>spring-modulith-events-api</artifactId>
+      <groupId>org.springframework.modulith</groupId>
+    </dependency>
+
     <!-- Flyway -->
     <dependency>
       <artifactId>flyway-database-postgresql</artifactId>
@@ -280,7 +295,7 @@
 
 
     <!-- ===================================================== -->
-    <!-- TESTES                                                -->
+    <!--                   TESTES                              -->
     <!-- ===================================================== -->
     <dependency>
       <artifactId>spring-boot-starter-thymeleaf-test</artifactId>
@@ -324,6 +339,12 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <artifactId>spring-modulith-starter-test</artifactId>
+      <groupId>org.springframework.modulith</groupId>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Testcontainers -->
     <dependency>
       <artifactId>testcontainers-postgresql</artifactId>
@@ -338,6 +359,18 @@
     </dependency>
 
   </dependencies>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <artifactId>spring-modulith-bom</artifactId>
+        <groupId>org.springframework.modulith</groupId>
+        <scope>import</scope>
+        <type>pom</type>
+        <version>${spring-modulith.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <description>Omnibus API</description>
   <groupId>br.com.leao.gabriel</groupId>
@@ -356,6 +389,7 @@
     <java.version>21</java.version>
     <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
     <org.mapstruct.version>1.6.3</org.mapstruct.version>
+    <spring-modulith.version>2.1.1</spring-modulith.version>
   </properties>
 
   <version>0.0.1-SNAPSHOT</version>

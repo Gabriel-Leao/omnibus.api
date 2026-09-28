@@ -1,0 +1,11 @@
+package br.com.leao.gabriel.omnibus.identity.domain.model;
+
+/**
+ * Defines the roles available to staff members.
+ */
+public enum StaffRole {
+  VIEWER,
+  MANAGER,
+  EDITOR,
+  ADMIN
+}
